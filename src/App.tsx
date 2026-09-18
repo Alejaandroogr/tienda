@@ -16,7 +16,7 @@ function App() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost/tienda-api/productos/listar.php')
+    fetch('http://localhost/tienda/backend/productos/listar.php')
       .then((respuesta) => {
         if (!respuesta.ok) {
           throw new Error('Error al obtener los productos');
