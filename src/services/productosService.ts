@@ -11,3 +11,17 @@ export async function obtenerProductos(): Promise<Producto[]> {
 
   return await respuesta.json();
 }
+
+export async function obtenerProductoPorId(
+  id: number
+): Promise<Producto> {
+  const respuesta = await fetch(
+    `http://localhost/tienda/backend/productos/obtener.php?id=${id}`
+  );
+
+  if (!respuesta.ok) {
+    throw new Error('Producto no encontrado');
+  }
+
+  return await respuesta.json();
+}

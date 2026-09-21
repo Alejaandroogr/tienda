@@ -1,4 +1,5 @@
 import type { Producto } from '../types/Producto';
+import { Link } from 'react-router-dom';
 
 interface ProductCardProps {
   producto: Producto;
@@ -38,9 +39,12 @@ function ProductCard({ producto }: ProductCardProps) {
             {producto.precio} €
           </span>
 
-          <button type="button">
-            Ver producto
-          </button>
+          <Link
+          to={`/productos/${producto.id}`}
+          className="product-button"
+        >
+          Ver producto
+        </Link>
         </div>
       </div>
     </article>

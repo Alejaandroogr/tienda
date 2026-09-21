@@ -1,19 +1,41 @@
+import { Link } from 'react-router-dom';
+import { useCarrito } from '../context/useCarrito';
+
 function Navbar() {
+  const { carrito } = useCarrito();
+
+  const cantidadProductos = carrito.reduce(
+    (total, item) => total + item.cantidad,
+    0
+  );
+
   return (
     <header className="navbar">
       <div className="navbar-container">
-
-        <a href="/" className="navbar-logo">
+        <Link to="/" className="navbar-logo">
           TECHSTORE
-        </a>
+        </Link>
 
         <nav className="navbar-menu">
-          <a href="/">Inicio</a>
-          <a href="/productos">Productos</a>
-          <a href="/carrito">Carrito</a>
-          <a href="/login">Iniciar sesión</a>
-        </nav>
+          <Link to="/">Inicio</Link>
 
+          <Link to="/productos">
+            Productos
+          </Link>
+
+          <Link to="/carrito">
+            Carrito
+            {cantidadProductos > 0 && (
+              <span className="cart-count">
+                {cantidadProductos}
+              </span>
+            )}
+          </Link>
+
+          <Link to="/login">
+            Iniciar sesión
+          </Link>
+        </nav>
       </div>
     </header>
   );
