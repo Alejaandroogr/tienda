@@ -12,6 +12,7 @@ export interface CarritoContextType {
   eliminarDelCarrito: (id: number) => void;
   aumentarCantidad: (id: number) => void;
   disminuirCantidad: (id: number) => void;
+  vaciarCarrito: () => void;
 }
 
 export const CarritoContext =

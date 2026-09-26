@@ -1,5 +1,7 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
 import { useCarrito } from '../context/useCarrito';
+import { useAuth } from '../context/useAuth';
 
 function Carrito() {
   const {
@@ -9,11 +11,26 @@ function Carrito() {
     eliminarDelCarrito,
   } = useCarrito();
 
+  const { usuario } = useAuth();
+
+  const navigate = useNavigate();
+
   const total = carrito.reduce(
     (suma, item) =>
-      suma + Number(item.producto.precio) * item.cantidad,
+      suma +
+      Number(item.producto.precio) *
+        item.cantidad,
     0
   );
+
+  const tramitarPedido = () => {
+    if (!usuario) {
+      navigate('/login');
+      return;
+    }
+
+    navigate('/checkout');
+  };
 
   return (
     <main>
@@ -43,7 +60,8 @@ function Carrito() {
           <h2>Tu carrito está vacío</h2>
 
           <p>
-            Añade algún producto para empezar tu compra.
+            Añade algún producto para empezar
+            tu compra.
           </p>
 
           <Link
@@ -77,10 +95,15 @@ function Carrito() {
                     {item.producto.categoria}
                   </p>
 
-                  <h2>{item.producto.nombre}</h2>
+                  <h2>
+                    {item.producto.nombre}
+                  </h2>
 
                   <p className="cart-item-price">
-                    {Number(item.producto.precio).toFixed(2)} €
+                    {Number(
+                      item.producto.precio
+                    ).toFixed(2)}{' '}
+                    €
                   </p>
 
                   <div className="cart-item-actions">
@@ -96,7 +119,9 @@ function Carrito() {
                         −
                       </button>
 
-                      <span>{item.cantidad}</span>
+                      <span>
+                        {item.cantidad}
+                      </span>
 
                       <button
                         type="button"
@@ -129,8 +154,9 @@ function Carrito() {
 
                   <strong>
                     {(
-                      Number(item.producto.precio) *
-                      item.cantidad
+                      Number(
+                        item.producto.precio
+                      ) * item.cantidad
                     ).toFixed(2)}{' '}
                     €
                   </strong>
@@ -157,7 +183,9 @@ function Carrito() {
             <div className="cart-summary-row">
               <span>Subtotal</span>
 
-              <span>{total.toFixed(2)} €</span>
+              <span>
+                {total.toFixed(2)} €
+              </span>
             </div>
 
             <div className="cart-summary-row">
@@ -177,6 +205,7 @@ function Carrito() {
             <button
               type="button"
               className="cart-checkout"
+              onClick={tramitarPedido}
             >
               Tramitar pedido
             </button>

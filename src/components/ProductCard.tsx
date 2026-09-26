@@ -26,10 +26,6 @@ function ProductCard({ producto }: ProductCardProps) {
 
         <h2>{producto.nombre}</h2>
 
-        <p className="product-description">
-          {producto.descripcion}
-        </p>
-
         <p className="product-stock">
           Stock: {producto.stock}
         </p>
