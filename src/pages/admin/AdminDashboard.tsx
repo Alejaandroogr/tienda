@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { useAuth } from '../../context/useAuth';
-
 
 interface DashboardData {
   usuarios: {
@@ -10,6 +10,8 @@ interface DashboardData {
 
   productos: {
     total: number;
+    sin_stock: number;
+    stock_bajo: number;
   };
 
   pedidos: {
@@ -77,7 +79,6 @@ function AdminDashboard() {
     if (usuario?.rol === 'admin') {
       obtenerDashboard();
     }
-
   }, [usuario]);
 
   if (!usuario) {
@@ -140,8 +141,9 @@ function AdminDashboard() {
     <main>
       <div className="admin-container">
 
-        <div className="admin-header">
+        {/* CABECERA */}
 
+        <div className="admin-header">
           <div>
             <p className="admin-subtitle">
               ADMINISTRACIÓN
@@ -156,12 +158,17 @@ function AdminDashboard() {
               Aquí tienes un resumen de la tienda.
             </p>
           </div>
-
         </div>
+
+
+        {/* ESTADÍSTICAS PRINCIPALES */}
 
         <section className="admin-stats">
 
-          <article className="admin-stat-card">
+          <Link
+            to="/admin/usuarios"
+            className="admin-stat-card admin-stat-card-link"
+          >
             <span className="admin-stat-label">
               Usuarios
             </span>
@@ -169,9 +176,17 @@ function AdminDashboard() {
             <strong className="admin-stat-value">
               {datos.usuarios.total}
             </strong>
-          </article>
 
-          <article className="admin-stat-card">
+            <span className="admin-stat-action">
+              Ver usuarios →
+            </span>
+          </Link>
+
+
+          <Link
+            to="/admin/productos"
+            className="admin-stat-card admin-stat-card-link"
+          >
             <span className="admin-stat-label">
               Productos
             </span>
@@ -179,9 +194,17 @@ function AdminDashboard() {
             <strong className="admin-stat-value">
               {datos.productos.total}
             </strong>
-          </article>
 
-          <article className="admin-stat-card">
+            <span className="admin-stat-action">
+              Ver productos →
+            </span>
+          </Link>
+
+
+          <Link
+            to="/admin/pedidos"
+            className="admin-stat-card admin-stat-card-link"
+          >
             <span className="admin-stat-label">
               Pedidos
             </span>
@@ -189,9 +212,17 @@ function AdminDashboard() {
             <strong className="admin-stat-value">
               {datos.pedidos.total}
             </strong>
-          </article>
 
-          <article className="admin-stat-card">
+            <span className="admin-stat-action">
+              Ver pedidos →
+            </span>
+          </Link>
+
+
+          <Link
+            to="/admin/pedidos"
+            className="admin-stat-card admin-stat-card-link"
+          >
             <span className="admin-stat-label">
               Ventas
             </span>
@@ -201,9 +232,16 @@ function AdminDashboard() {
                 datos.ventas.total
               ).toFixed(2)} €
             </strong>
-          </article>
+
+            <span className="admin-stat-action">
+              Ver pedidos →
+            </span>
+          </Link>
 
         </section>
+
+
+        {/* RESUMEN DE PEDIDOS */}
 
         <section className="admin-orders-summary">
 
@@ -219,6 +257,7 @@ function AdminDashboard() {
             </div>
           </div>
 
+
           <div className="admin-order-stats">
 
             <div className="admin-order-stat">
@@ -231,6 +270,7 @@ function AdminDashboard() {
               </strong>
             </div>
 
+
             <div className="admin-order-stat">
               <span>
                 Procesando
@@ -240,6 +280,7 @@ function AdminDashboard() {
                 {datos.pedidos.procesando}
               </strong>
             </div>
+
 
             <div className="admin-order-stat">
               <span>
@@ -251,6 +292,7 @@ function AdminDashboard() {
               </strong>
             </div>
 
+
             <div className="admin-order-stat">
               <span>
                 Entregados
@@ -261,6 +303,7 @@ function AdminDashboard() {
               </strong>
             </div>
 
+
             <div className="admin-order-stat">
               <span>
                 Cancelados
@@ -270,6 +313,74 @@ function AdminDashboard() {
                 {datos.pedidos.cancelados}
               </strong>
             </div>
+
+          </div>
+
+        </section>
+
+
+        {/* ALERTAS DE STOCK */}
+
+        <section className="admin-stock-summary">
+
+          <div className="admin-section-header">
+            <div>
+              <p className="admin-section-subtitle">
+                INVENTARIO
+              </p>
+
+              <h2>
+                Estado del stock
+              </h2>
+            </div>
+          </div>
+
+
+          <div className="admin-stock-alerts">
+
+            <Link
+              to="/admin/productos"
+              className="admin-stock-alert admin-stock-alert-link"
+            >
+              <div className="admin-stock-alert-info">
+
+                <span className="admin-stock-alert-title">
+                  Productos sin stock
+                </span>
+
+                <span className="admin-stock-alert-description">
+                  Productos que actualmente no tienen
+                  unidades disponibles.
+                </span>
+
+              </div>
+
+              <strong className="admin-stock-alert-value">
+                {datos.productos.sin_stock}
+              </strong>
+            </Link>
+
+
+            <Link
+              to="/admin/productos"
+              className="admin-stock-alert admin-stock-alert-link"
+            >
+              <div className="admin-stock-alert-info">
+
+                <span className="admin-stock-alert-title">
+                  Stock bajo
+                </span>
+
+                <span className="admin-stock-alert-description">
+                  Productos con 10 unidades o menos.
+                </span>
+
+              </div>
+
+              <strong className="admin-stock-alert-value">
+                {datos.productos.stock_bajo}
+              </strong>
+            </Link>
 
           </div>
 

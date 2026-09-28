@@ -215,43 +215,83 @@ main {
    ========================= */
 
 .filters {
+  display: grid;
+  grid-template-columns: 180px 220px minmax(280px, 1fr);
+  align-items: stretch;
+  gap: 15px;
+
+  width: 100%;
+  max-width: 850px;
+  margin: 25px auto 35px;
+}
+
+
+/* Filtro de precio */
+
+.price-filter {
+  width: 100%;
+  min-height: 100px;
+
+  padding: 14px 18px;
+
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+
+  background: white;
+
+  box-shadow: none;
+}
+
+.price-filter-title {
+  margin-bottom: 10px;
+
+  color: #555;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.price-filter-values {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
 
   gap: 15px;
 
-  margin-bottom: 30px;
+  margin-bottom: 12px;
 }
 
-.filters select,
-.filters input {
-  padding: 12px 15px;
-
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-
-  background-color: white;
-
-  font-size: 15px;
-
-  outline: none;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+.price-value {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.filters select:focus,
-.filters input:focus {
-  border-color: #2563eb;
-
-  box-shadow:
-    0 0 0 3px rgba(37, 99, 235, 0.1);
+.price-value span {
+  color: #888;
+  font-size: 10px;
 }
 
-.filters input {
-  width: 180px;
+.price-value strong {
+  color: #222;
+  font-size: 14px;
+}
+
+.price-separator {
+  color: #aaa;
+  font-size: 13px;
+}
+
+.price-slider {
+  width: 100%;
+  padding: 0 3px;
+}
+
+.price-slider [data-slot="slider"] {
+  width: 100%;
 }
 
 
@@ -1058,13 +1098,19 @@ main {
   /* Filtros */
 
   .filters {
+    display: flex;
     flex-direction: column;
 
+    align-items: stretch;
+
     width: 100%;
+    max-width: 100%;
+
+    gap: 12px;
   }
 
-  .filters select,
-  .filters input {
+
+  .price-filter {
     width: 100%;
   }
 
@@ -2887,4 +2933,17 @@ main {
   background: #111;
   color: #fff;
   border-color: #111;
+}
+
+[data-slot="select-item"] {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 10px;
+}
+
+.select-filters {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 15px;
 }

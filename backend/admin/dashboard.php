@@ -46,6 +46,31 @@ try {
     $totalProductos = (int) $stmtProductos->fetchColumn();
 
 
+    // Productos sin stock
+    $stmtProductosSinStock = $pdo->query("
+        SELECT COUNT(*)
+        FROM productos
+        WHERE stock = 0
+    ");
+
+    $productosSinStock =
+        (int) $stmtProductosSinStock->fetchColumn();
+
+
+    // Productos con stock bajo
+    // Se consideran productos con 10 unidades o menos,
+    // pero que todavía tienen stock disponible.
+    $stmtProductosStockBajo = $pdo->query("
+        SELECT COUNT(*)
+        FROM productos
+        WHERE stock > 0
+        AND stock <= 10
+    ");
+
+    $productosStockBajo =
+        (int) $stmtProductosStockBajo->fetchColumn();
+
+
     // Total de pedidos
     $stmtPedidos = $pdo->query("
         SELECT COUNT(*) AS total
@@ -73,7 +98,8 @@ try {
         WHERE estado = 'pendiente'
     ");
 
-    $pedidosPendientes = (int) $stmtPendientes->fetchColumn();
+    $pedidosPendientes =
+        (int) $stmtPendientes->fetchColumn();
 
 
     // Pedidos procesando
@@ -83,7 +109,8 @@ try {
         WHERE estado = 'procesando'
     ");
 
-    $pedidosProcesando = (int) $stmtProcesando->fetchColumn();
+    $pedidosProcesando =
+        (int) $stmtProcesando->fetchColumn();
 
 
     // Pedidos enviados
@@ -93,7 +120,8 @@ try {
         WHERE estado = 'enviado'
     ");
 
-    $pedidosEnviados = (int) $stmtEnviados->fetchColumn();
+    $pedidosEnviados =
+        (int) $stmtEnviados->fetchColumn();
 
 
     // Pedidos entregados
@@ -103,7 +131,8 @@ try {
         WHERE estado = 'entregado'
     ");
 
-    $pedidosEntregados = (int) $stmtEntregados->fetchColumn();
+    $pedidosEntregados =
+        (int) $stmtEntregados->fetchColumn();
 
 
     // Pedidos cancelados
@@ -113,7 +142,8 @@ try {
         WHERE estado = 'cancelado'
     ");
 
-    $pedidosCancelados = (int) $stmtCancelados->fetchColumn();
+    $pedidosCancelados =
+        (int) $stmtCancelados->fetchColumn();
 
 
     echo json_encode([
@@ -122,7 +152,9 @@ try {
         ],
 
         'productos' => [
-            'total' => $totalProductos
+            'total' => $totalProductos,
+            'sin_stock' => $productosSinStock,
+            'stock_bajo' => $productosStockBajo
         ],
 
         'pedidos' => [

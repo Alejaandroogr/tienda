@@ -31,6 +31,17 @@ function AdminUsuarios() {
   const [actualizandoId, setActualizandoId] =
     useState<number | null>(null);
 
+  const [busqueda, setBusqueda] =
+    useState('');
+
+  const [rolFiltro, setRolFiltro] =
+    useState('');
+
+  const [paginaActual, setPaginaActual] =
+    useState(1);
+
+  const usuariosPorPagina = 10;
+
   useEffect(() => {
     const cargarUsuarios = async () => {
       try {
@@ -151,6 +162,85 @@ function AdminUsuarios() {
     );
   };
 
+  /*
+   * FILTRAR USUARIOS
+   */
+  const usuariosFiltrados =
+    usuarios.filter((usuarioActual) => {
+      const textoBusqueda =
+        busqueda.trim().toLowerCase();
+
+      const coincideBusqueda =
+        textoBusqueda === '' ||
+        usuarioActual.nombre
+          .toLowerCase()
+          .includes(textoBusqueda) ||
+        usuarioActual.email
+          .toLowerCase()
+          .includes(textoBusqueda) ||
+        usuarioActual.id
+          .toString()
+          .includes(textoBusqueda);
+
+      const coincideRol =
+        rolFiltro === '' ||
+        usuarioActual.rol === rolFiltro;
+
+      return (
+        coincideBusqueda &&
+        coincideRol
+      );
+    });
+
+  /*
+   * PAGINACIÓN
+   */
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(
+      usuariosFiltrados.length /
+        usuariosPorPagina
+    )
+  );
+
+  const paginaMostrada = Math.min(
+    paginaActual,
+    totalPaginas
+  );
+
+  const indiceUltimoUsuario =
+    paginaMostrada * usuariosPorPagina;
+
+  const indicePrimerUsuario =
+    indiceUltimoUsuario -
+    usuariosPorPagina;
+
+  const usuariosPagina =
+    usuariosFiltrados.slice(
+      indicePrimerUsuario,
+      indiceUltimoUsuario
+    );
+
+  /*
+   * CAMBIAR BÚSQUEDA
+   */
+  const cambiarBusqueda = (
+    evento: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setBusqueda(evento.target.value);
+    setPaginaActual(1);
+  };
+
+  /*
+   * CAMBIAR FILTRO DE ROL
+   */
+  const cambiarFiltroRol = (
+    evento: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setRolFiltro(evento.target.value);
+    setPaginaActual(1);
+  };
+
   if (!usuario) {
     return (
       <main>
@@ -167,6 +257,7 @@ function AdminUsuarios() {
           </p>
 
         </div>
+
       </main>
     );
   }
@@ -187,6 +278,7 @@ function AdminUsuarios() {
           </p>
 
         </div>
+
       </main>
     );
   }
@@ -202,6 +294,7 @@ function AdminUsuarios() {
           </p>
 
         </div>
+
       </main>
     );
   }
@@ -220,13 +313,13 @@ function AdminUsuarios() {
           </p>
 
         </div>
+
       </main>
     );
   }
 
   return (
     <main>
-
 
       <div className="admin-container">
 
@@ -280,140 +373,272 @@ function AdminUsuarios() {
             </div>
 
             <span className="admin-order-count">
-              {usuarios.length}{' '}
 
-              {usuarios.length === 1
+              {usuariosFiltrados.length}{' '}
+
+              {usuariosFiltrados.length === 1
                 ? 'usuario'
                 : 'usuarios'}
+
             </span>
 
           </div>
 
-          <div className="admin-products-table">
+          {/* FILTROS */}
 
-            <table>
+          <div className="admin-users-filters">
 
-              <thead>
+            <input
+              type="text"
+              className="admin-users-search"
+              placeholder="Buscar por nombre, email o ID..."
+              value={busqueda}
+              onChange={cambiarBusqueda}
+            />
 
-                <tr>
+            <select
+              className="admin-users-role-filter"
+              value={rolFiltro}
+              onChange={cambiarFiltroRol}
+            >
 
-                  <th>
-                    ID
-                  </th>
+              <option value="">
+                Todos los roles
+              </option>
 
-                  <th>
-                    Usuario
-                  </th>
+              <option value="cliente">
+                Clientes
+              </option>
 
-                  <th>
-                    Email
-                  </th>
+              <option value="admin">
+                Administradores
+              </option>
 
-                  <th>
-                    Fecha de registro
-                  </th>
-
-                  <th>
-                    Rol
-                  </th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {usuarios.length === 0 ? (
-
-                  <tr>
-
-                    <td
-                      colSpan={5}
-                      className="admin-empty"
-                    >
-                      No hay usuarios registrados.
-                    </td>
-
-                  </tr>
-
-                ) : (
-
-                  usuarios.map(
-                    (usuarioActual) => (
-
-                      <tr
-                        key={usuarioActual.id}
-                      >
-
-                        <td>
-                          #{usuarioActual.id}
-                        </td>
-
-                        <td>
-
-                          <strong>
-                            {usuarioActual.nombre}
-                          </strong>
-
-                        </td>
-
-                        <td>
-                          {usuarioActual.email}
-                        </td>
-
-                        <td>
-                          {formatearFecha(
-                            usuarioActual.creado_en
-                          )}
-                        </td>
-
-                        <td>
-
-                          <select
-                            className={`admin-user-role role-${usuarioActual.rol}`}
-                            value={
-                              usuarioActual.rol
-                            }
-                            disabled={
-                              usuarioActual.id ===
-                                usuario.id ||
-                              actualizandoId ===
-                                usuarioActual.id
-                            }
-                            onChange={(evento) =>
-                              cambiarRol(
-                                usuarioActual.id,
-                                evento.target.value as
-                                  | 'cliente'
-                                  | 'admin'
-                              )
-                            }
-                          >
-
-                            <option value="cliente">
-                              Cliente
-                            </option>
-
-                            <option value="admin">
-                              Administrador
-                            </option>
-
-                          </select>
-
-                        </td>
-
-                      </tr>
-
-                    )
-                  )
-
-                )}
-
-              </tbody>
-
-            </table>
+            </select>
 
           </div>
+
+          {usuarios.length === 0 ? (
+
+            <div className="admin-empty">
+
+              <p>
+                No hay usuarios registrados.
+              </p>
+
+            </div>
+
+          ) : usuariosFiltrados.length === 0 ? (
+
+            <div className="admin-empty">
+
+              <p>
+                No se han encontrado usuarios
+                con esos filtros.
+              </p>
+
+            </div>
+
+          ) : (
+
+            <>
+
+              <div className="admin-products-table">
+
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        ID
+                      </th>
+
+                      <th>
+                        Usuario
+                      </th>
+
+                      <th>
+                        Email
+                      </th>
+
+                      <th>
+                        Fecha de registro
+                      </th>
+
+                      <th>
+                        Rol
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {usuariosPagina.map(
+                      (usuarioActual) => (
+
+                        <tr
+                          key={
+                            usuarioActual.id
+                          }
+                        >
+
+                          <td>
+                            #{usuarioActual.id}
+                          </td>
+
+                          <td>
+
+                            <strong>
+                              {
+                                usuarioActual.nombre
+                              }
+                            </strong>
+
+                          </td>
+
+                          <td>
+                            {
+                              usuarioActual.email
+                            }
+                          </td>
+
+                          <td>
+                            {formatearFecha(
+                              usuarioActual.creado_en
+                            )}
+                          </td>
+
+                          <td>
+
+                            <select
+                              className={`admin-user-role role-${usuarioActual.rol}`}
+                              value={
+                                usuarioActual.rol
+                              }
+                              disabled={
+                                usuarioActual.id ===
+                                  usuario.id ||
+                                actualizandoId ===
+                                  usuarioActual.id
+                              }
+                              onChange={(
+                                evento
+                              ) =>
+                                cambiarRol(
+                                  usuarioActual.id,
+                                  evento.target
+                                    .value as
+                                    | 'cliente'
+                                    | 'admin'
+                                )
+                              }
+                            >
+
+                              <option value="cliente">
+                                Cliente
+                              </option>
+
+                              <option value="admin">
+                                Administrador
+                              </option>
+
+                            </select>
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+              {/* PAGINACIÓN */}
+
+              <div className="admin-pagination">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.max(
+                          pagina - 1,
+                          1
+                        )
+                    )
+                  }
+                  disabled={
+                    paginaMostrada === 1
+                  }
+                >
+                  ← Anterior
+                </button>
+
+                <div className="admin-pagination-pages">
+
+                  {Array.from(
+                    {
+                      length: totalPaginas,
+                    },
+                    (_, indice) =>
+                      indice + 1
+                  ).map((pagina) => (
+
+                    <button
+                      key={pagina}
+                      type="button"
+                      className={
+                        pagina ===
+                        paginaMostrada
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() =>
+                        setPaginaActual(
+                          pagina
+                        )
+                      }
+                    >
+                      {pagina}
+                    </button>
+
+                  ))}
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.min(
+                          pagina + 1,
+                          totalPaginas
+                        )
+                    )
+                  }
+                  disabled={
+                    paginaMostrada ===
+                    totalPaginas
+                  }
+                >
+                  Siguiente →
+                </button>
+
+              </div>
+
+            </>
+
+          )}
 
         </section>
 

@@ -7,7 +7,6 @@ import {
 import { useAuth } from '../../context/useAuth';
 import type { Producto } from '../../types/Producto';
 
-
 interface Categoria {
   id: number;
   nombre: string;
@@ -60,6 +59,21 @@ function AdminProductos() {
 
   const [eliminandoId, setEliminandoId] =
     useState<number | null>(null);
+
+  const [busqueda, setBusqueda] =
+    useState('');
+
+  const [categoriaFiltro, setCategoriaFiltro] =
+    useState('');
+
+  const [paginaActual, setPaginaActual] =
+    useState(1);
+
+  const productosPorPagina = 10;
+
+  /*
+   * CARGAR PRODUCTOS Y CATEGORÍAS
+   */
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -121,6 +135,63 @@ function AdminProductos() {
 
   }, [usuario]);
 
+  /*
+   * FILTRAR PRODUCTOS
+   */
+
+  const productosFiltrados =
+    productos.filter((producto) => {
+      const coincideNombre =
+        producto.nombre
+          .toLowerCase()
+          .includes(
+            busqueda.toLowerCase()
+          );
+
+      const coincideCategoria =
+        categoriaFiltro === '' ||
+        producto.categoria === categoriaFiltro;
+
+      return (
+        coincideNombre &&
+        coincideCategoria
+      );
+    });
+
+  /*
+   * PAGINACIÓN
+   */
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(
+      productosFiltrados.length /
+        productosPorPagina
+    )
+  );
+
+  const paginaMostrada = Math.min(
+    paginaActual,
+    totalPaginas
+  );
+
+  const indiceUltimoProducto =
+    paginaMostrada * productosPorPagina;
+
+  const indicePrimerProducto =
+    indiceUltimoProducto -
+    productosPorPagina;
+
+  const productosPagina =
+    productosFiltrados.slice(
+      indicePrimerProducto,
+      indiceUltimoProducto
+    );
+
+  /*
+   * LIMPIAR FORMULARIO
+   */
+
   const limpiarFormulario = () => {
     setNombre('');
     setDescripcion('');
@@ -133,10 +204,18 @@ function AdminProductos() {
     setProductoEditando(null);
   };
 
+  /*
+   * NUEVO PRODUCTO
+   */
+
   const manejarNuevoProducto = () => {
     limpiarFormulario();
     setMostrarFormulario(true);
   };
+
+  /*
+   * EDITAR PRODUCTO
+   */
 
   const manejarEditarProducto = (
     producto: Producto
@@ -166,10 +245,18 @@ function AdminProductos() {
     setMostrarFormulario(true);
   };
 
+  /*
+   * CERRAR FORMULARIO
+   */
+
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
     limpiarFormulario();
   };
+
+  /*
+   * RECARGAR PRODUCTOS
+   */
 
   const recargarProductos = async () => {
     const respuesta =
@@ -189,6 +276,10 @@ function AdminProductos() {
 
     setProductos(datos);
   };
+
+  /*
+   * CREAR PRODUCTO
+   */
 
   const manejarCrearProducto = async (
     evento: FormEvent<HTMLFormElement>
@@ -212,12 +303,26 @@ function AdminProductos() {
       return;
     }
 
+    const precioNumerico = Number(precio);
+    const stockNumerico = Number(stock);
+
     if (
-      Number(precio) < 0 ||
-      Number(stock) < 0
+      !Number.isFinite(precioNumerico) ||
+      precioNumerico < 0
     ) {
       setError(
-        'El precio y el stock no pueden ser negativos'
+        'El precio debe ser un número válido mayor o igual a 0'
+      );
+
+      return;
+    }
+
+    if (
+      !Number.isInteger(stockNumerico) ||
+      stockNumerico < 0
+    ) {
+      setError(
+        'El stock debe ser un número entero mayor o igual a 0'
       );
 
       return;
@@ -238,8 +343,8 @@ function AdminProductos() {
             body: JSON.stringify({
               nombre: nombre.trim(),
               descripcion: descripcion.trim(),
-              precio: Number(precio),
-              stock: Number(stock),
+              precio: precioNumerico,
+              stock: stockNumerico,
               imagen: imagen.trim(),
               categoria_id: Number(categoriaId),
             }),
@@ -282,6 +387,10 @@ function AdminProductos() {
     }
   };
 
+  /*
+   * EDITAR PRODUCTO
+   */
+
   const guardarCambiosProducto = async (
     evento: FormEvent<HTMLFormElement>
   ) => {
@@ -308,12 +417,26 @@ function AdminProductos() {
       return;
     }
 
+    const precioNumerico = Number(precio);
+    const stockNumerico = Number(stock);
+
     if (
-      Number(precio) < 0 ||
-      Number(stock) < 0
+      !Number.isFinite(precioNumerico) ||
+      precioNumerico < 0
     ) {
       setError(
-        'El precio y el stock no pueden ser negativos'
+        'El precio debe ser un número válido mayor o igual a 0'
+      );
+
+      return;
+    }
+
+    if (
+      !Number.isInteger(stockNumerico) ||
+      stockNumerico < 0
+    ) {
+      setError(
+        'El stock debe ser un número entero mayor o igual a 0'
       );
 
       return;
@@ -335,8 +458,8 @@ function AdminProductos() {
               id: productoEditando.id,
               nombre: nombre.trim(),
               descripcion: descripcion.trim(),
-              precio: Number(precio),
-              stock: Number(stock),
+              precio: precioNumerico,
+              stock: stockNumerico,
               imagen: imagen.trim(),
               categoria_id: Number(categoriaId),
             }),
@@ -377,6 +500,10 @@ function AdminProductos() {
       setGuardando(false);
     }
   };
+
+  /*
+   * ELIMINAR PRODUCTO
+   */
 
   const manejarEliminarProducto = async (
     producto: Producto
@@ -442,10 +569,38 @@ function AdminProductos() {
     }
   };
 
+  /*
+   * CAMBIAR BÚSQUEDA
+   */
+
+  const cambiarBusqueda = (
+    evento: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setBusqueda(evento.target.value);
+    setPaginaActual(1);
+  };
+
+  /*
+   * CAMBIAR CATEGORÍA
+   */
+
+  const cambiarCategoriaFiltro = (
+    evento: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    setCategoriaFiltro(evento.target.value);
+    setPaginaActual(1);
+  };
+
+  /*
+   * ACCESO
+   */
+
   if (!usuario) {
     return (
       <main>
+
         <div className="admin-message">
+
           <h1>
             Acceso restringido
           </h1>
@@ -454,7 +609,9 @@ function AdminProductos() {
             Debes iniciar sesión para acceder
             al panel de administración.
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -462,7 +619,9 @@ function AdminProductos() {
   if (usuario.rol !== 'admin') {
     return (
       <main>
+
         <div className="admin-message">
+
           <h1>
             Acceso denegado
           </h1>
@@ -471,7 +630,9 @@ function AdminProductos() {
             No tienes permisos para acceder
             al panel de administración.
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -479,11 +640,15 @@ function AdminProductos() {
   if (cargando) {
     return (
       <main>
+
         <div className="admin-message">
+
           <p>
             Cargando productos...
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -494,19 +659,28 @@ function AdminProductos() {
   ) {
     return (
       <main>
+
         <div className="admin-message admin-error">
-          <p>{error}</p>
+
+          <p>
+            {error}
+          </p>
+
         </div>
+
       </main>
     );
   }
 
   return (
     <main>
+
       <div className="admin-container">
 
         <div className="admin-header">
+
           <div>
+
             <p className="admin-subtitle">
               ADMINISTRACIÓN
             </p>
@@ -518,7 +692,9 @@ function AdminProductos() {
             <p>
               Gestiona los productos de la tienda.
             </p>
+
           </div>
+
         </div>
 
         {mensaje && (
@@ -538,6 +714,7 @@ function AdminProductos() {
           <div className="admin-section-header">
 
             <div>
+
               <p className="admin-section-subtitle">
                 CATÁLOGO
               </p>
@@ -545,6 +722,7 @@ function AdminProductos() {
               <h2>
                 Lista de productos
               </h2>
+
             </div>
 
             <button
@@ -557,12 +735,52 @@ function AdminProductos() {
 
           </div>
 
+          {/* FILTROS */}
+
+          <div className="admin-products-filters">
+
+            <input
+              type="text"
+              value={busqueda}
+              onChange={cambiarBusqueda}
+              placeholder="Buscar producto..."
+              className="admin-search-input"
+            />
+
+            <select
+              value={categoriaFiltro}
+              onChange={cambiarCategoriaFiltro}
+              className="admin-category-filter"
+            >
+
+              <option value="">
+                Todas las categorías
+              </option>
+
+              {categorias.map(
+                (categoria) => (
+                  <option
+                    key={categoria.id}
+                    value={categoria.nombre}
+                  >
+                    {categoria.nombre}
+                  </option>
+                )
+              )}
+
+            </select>
+
+          </div>
+
+          {/* FORMULARIO */}
+
           {mostrarFormulario && (
             <div className="admin-form-card">
 
               <div className="admin-form-header">
 
                 <div>
+
                   <p className="admin-section-subtitle">
                     PRODUCTO
                   </p>
@@ -572,12 +790,14 @@ function AdminProductos() {
                       ? 'Editar producto'
                       : 'Nuevo producto'}
                   </h2>
+
                 </div>
 
                 <button
                   type="button"
                   className="admin-close-button"
                   onClick={cerrarFormulario}
+                  disabled={guardando}
                 >
                   ×
                 </button>
@@ -595,6 +815,8 @@ function AdminProductos() {
 
                 <div className="admin-form-grid">
 
+                  {/* NOMBRE */}
+
                   <div className="form-group">
 
                     <label htmlFor="nombre">
@@ -611,9 +833,12 @@ function AdminProductos() {
                         )
                       }
                       placeholder="Nombre del producto"
+                      required
                     />
 
                   </div>
+
+                  {/* CATEGORÍA */}
 
                   <div className="form-group">
 
@@ -629,6 +854,7 @@ function AdminProductos() {
                           evento.target.value
                         )
                       }
+                      required
                     >
 
                       <option value="">
@@ -650,6 +876,8 @@ function AdminProductos() {
 
                   </div>
 
+                  {/* PRECIO */}
+
                   <div className="form-group">
 
                     <label htmlFor="precio">
@@ -668,9 +896,12 @@ function AdminProductos() {
                         )
                       }
                       placeholder="0.00"
+                      required
                     />
 
                   </div>
+
+                  {/* STOCK */}
 
                   <div className="form-group">
 
@@ -690,9 +921,12 @@ function AdminProductos() {
                         )
                       }
                       placeholder="0"
+                      required
                     />
 
                   </div>
+
+                  {/* IMAGEN */}
 
                   <div className="form-group admin-form-full">
 
@@ -702,7 +936,7 @@ function AdminProductos() {
 
                     <input
                       id="imagen"
-                      type="text"
+                      type="url"
                       value={imagen}
                       onChange={(evento) =>
                         setImagen(
@@ -712,7 +946,32 @@ function AdminProductos() {
                       placeholder="https://..."
                     />
 
+                    {imagen.trim() !== '' && (
+                      <div className="admin-image-preview">
+
+                        <p>
+                          Vista previa
+                        </p>
+
+                        <img
+                          src={imagen.trim()}
+                          alt="Vista previa del producto"
+                          onError={(evento) => {
+                            evento.currentTarget.style.display =
+                              'none';
+                          }}
+                          onLoad={(evento) => {
+                            evento.currentTarget.style.display =
+                              'block';
+                          }}
+                        />
+
+                      </div>
+                    )}
+
                   </div>
+
+                  {/* DESCRIPCIÓN */}
 
                   <div className="form-group admin-form-full">
 
@@ -730,6 +989,7 @@ function AdminProductos() {
                       }
                       placeholder="Descripción del producto"
                       rows={5}
+                      required
                     />
 
                   </div>
@@ -766,125 +1026,256 @@ function AdminProductos() {
             </div>
           )}
 
-          <div className="admin-products-table">
+          {/* TABLA */}
 
-            <table>
+          {productosFiltrados.length === 0 ? (
 
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th>Precio</th>
-                  <th>Stock</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
+            <div className="admin-empty">
 
-              <tbody>
+              <p>
+                {busqueda ||
+                categoriaFiltro
+                  ? 'No se han encontrado productos con estos filtros.'
+                  : 'No hay productos registrados.'}
+              </p>
 
-                {productos.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="admin-empty"
-                    >
-                      No hay productos registrados.
-                    </td>
-                  </tr>
-                ) : (
-                  productos.map(
-                    (producto) => (
-                      <tr
-                        key={producto.id}
-                      >
+            </div>
 
-                        <td>
-                          {producto.id}
-                        </td>
+          ) : (
 
-                        <td>
-                          <div className="admin-product-name">
+            <>
 
-                            {producto.imagen && (
-                              <img
-                                src={producto.imagen}
-                                alt={producto.nombre}
-                              />
-                            )}
+              <div className="admin-products-table">
 
-                            <span>
-                              {producto.nombre}
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        ID
+                      </th>
+
+                      <th>
+                        Producto
+                      </th>
+
+                      <th>
+                        Categoría
+                      </th>
+
+                      <th>
+                        Precio
+                      </th>
+
+                      <th>
+                        Stock
+                      </th>
+
+                      <th>
+                        Acciones
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {productosPagina.map(
+                      (producto) => (
+
+                        <tr
+                          key={producto.id}
+                        >
+
+                          <td>
+                            #{producto.id}
+                          </td>
+
+                          <td>
+
+                            <div className="admin-product-name">
+
+                              {producto.imagen && (
+                                <img
+                                  src={producto.imagen}
+                                  alt={producto.nombre}
+                                />
+                              )}
+
+                              <span>
+                                {producto.nombre}
+                              </span>
+
+                            </div>
+
+                          </td>
+
+                          <td>
+                            {producto.categoria}
+                          </td>
+
+                          <td>
+
+                            {Number(
+                              producto.precio
+                            ).toFixed(2)} €
+
+                          </td>
+
+                          <td>
+
+                            <span
+                              className={
+                                producto.stock === 0
+                                  ? 'stock-badge stock-out'
+                                  : producto.stock <= 10
+                                    ? 'stock-badge stock-low'
+                                    : 'stock-badge stock-ok'
+                              }
+                            >
+
+                              {producto.stock === 0
+                                ? 'Sin stock'
+                                : producto.stock}
+
                             </span>
 
-                          </div>
-                        </td>
+                          </td>
 
-                        <td>
-                          {producto.categoria}
-                        </td>
+                          <td>
 
-                        <td>
-                          {Number(
-                            producto.precio
-                          ).toFixed(2)} €
-                        </td>
+                            <div className="admin-product-actions">
 
-                        <td>
-                          {producto.stock}
-                        </td>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  manejarEditarProducto(
+                                    producto
+                                  )
+                                }
+                              >
+                                Editar
+                              </button>
 
-                        <td>
-
-                          <div className="admin-product-actions">
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                manejarEditarProducto(
-                                  producto
-                                )
-                              }
-                            >
-                              Editar
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                manejarEliminarProducto(
-                                  producto
-                                )
-                              }
-                              disabled={
-                                eliminandoId ===
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  manejarEliminarProducto(
+                                    producto
+                                  )
+                                }
+                                disabled={
+                                  eliminandoId ===
+                                  producto.id
+                                }
+                              >
+                                {eliminandoId ===
                                 producto.id
-                              }
-                            >
-                              {eliminandoId ===
-                              producto.id
-                                ? 'Eliminando...'
-                                : 'Eliminar'}
-                            </button>
+                                  ? 'Eliminando...'
+                                  : 'Eliminar'}
+                              </button>
 
-                          </div>
+                            </div>
 
-                        </td>
+                          </td>
 
-                      </tr>
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+              {/* PAGINACIÓN */}
+
+              <div className="admin-pagination">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.max(
+                          pagina - 1,
+                          1
+                        )
                     )
-                  )
-                )}
+                  }
+                  disabled={
+                    paginaMostrada === 1
+                  }
+                >
+                  ← Anterior
+                </button>
 
-              </tbody>
+                <div className="admin-pagination-pages">
 
-            </table>
+                  {Array.from(
+                    {
+                      length: totalPaginas,
+                    },
+                    (_, indice) =>
+                      indice + 1
+                  ).map((pagina) => (
 
-          </div>
+                    <button
+                      key={pagina}
+                      type="button"
+                      className={
+                        pagina ===
+                        paginaMostrada
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() =>
+                        setPaginaActual(
+                          pagina
+                        )
+                      }
+                    >
+                      {pagina}
+                    </button>
+
+                  ))}
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.min(
+                          pagina + 1,
+                          totalPaginas
+                        )
+                    )
+                  }
+                  disabled={
+                    paginaMostrada ===
+                    totalPaginas
+                  }
+                >
+                  Siguiente →
+                </button>
+
+              </div>
+
+            </>
+
+          )}
 
         </section>
 
       </div>
+
     </main>
   );
 }

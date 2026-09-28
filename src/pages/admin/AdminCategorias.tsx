@@ -6,7 +6,6 @@ import {
 
 import { useAuth } from '../../context/useAuth';
 
-
 interface Categoria {
   id: number;
   nombre: string;
@@ -41,6 +40,14 @@ function AdminCategorias() {
 
   const [eliminandoId, setEliminandoId] =
     useState<number | null>(null);
+
+  const [busqueda, setBusqueda] =
+    useState('');
+
+  const [paginaActual, setPaginaActual] =
+    useState(1);
+
+  const categoriasPorPagina = 10;
 
   useEffect(() => {
     const cargarCategorias = async () => {
@@ -128,7 +135,12 @@ function AdminCategorias() {
 
   const cerrarFormulario = () => {
     setMostrarFormulario(false);
-    limpiarFormulario();
+    limpiararFormularioSeguro();
+  };
+
+  const limpiararFormularioSeguro = () => {
+    setNombre('');
+    setCategoriaEditando(null);
   };
 
   const manejarGuardarCategoria = async (
@@ -284,10 +296,73 @@ function AdminCategorias() {
     }
   };
 
+  /*
+   * FILTRADO
+   */
+
+  const categoriasFiltradas =
+    categorias.filter((categoria) => {
+      const textoBusqueda =
+        busqueda.trim().toLowerCase();
+
+      return (
+        textoBusqueda === '' ||
+        categoria.nombre
+          .toLowerCase()
+          .includes(textoBusqueda) ||
+        categoria.id
+          .toString()
+          .includes(textoBusqueda)
+      );
+    });
+
+  /*
+   * PAGINACIÓN
+   */
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(
+      categoriasFiltradas.length /
+        categoriasPorPagina
+    )
+  );
+
+  const paginaMostrada = Math.min(
+    paginaActual,
+    totalPaginas
+  );
+
+  const indiceUltimaCategoria =
+    paginaMostrada * categoriasPorPagina;
+
+  const indicePrimeraCategoria =
+    indiceUltimaCategoria -
+    categoriasPorPagina;
+
+  const categoriasPagina =
+    categoriasFiltradas.slice(
+      indicePrimeraCategoria,
+      indiceUltimaCategoria
+    );
+
+  const cambiarBusqueda = (
+    evento: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setBusqueda(evento.target.value);
+    setPaginaActual(1);
+  };
+
+  /*
+   * ACCESO
+   */
+
   if (!usuario) {
     return (
       <main>
+
         <div className="admin-message">
+
           <h1>
             Acceso restringido
           </h1>
@@ -296,7 +371,9 @@ function AdminCategorias() {
             Debes iniciar sesión para acceder
             al panel de administración.
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -304,7 +381,9 @@ function AdminCategorias() {
   if (usuario.rol !== 'admin') {
     return (
       <main>
+
         <div className="admin-message">
+
           <h1>
             Acceso denegado
           </h1>
@@ -313,7 +392,9 @@ function AdminCategorias() {
             No tienes permisos para acceder
             al panel de administración.
           </p>
+
         </div>
+
       </main>
     );
   }
@@ -321,21 +402,28 @@ function AdminCategorias() {
   if (cargando) {
     return (
       <main>
+
         <div className="admin-message">
+
           <p>
             Cargando categorías...
           </p>
+
         </div>
+
       </main>
     );
   }
 
   return (
     <main>
+
       <div className="admin-container">
 
         <div className="admin-header">
+
           <div>
+
             <p className="admin-subtitle">
               ADMINISTRACIÓN
             </p>
@@ -347,7 +435,9 @@ function AdminCategorias() {
             <p>
               Gestiona las categorías de la tienda.
             </p>
+
           </div>
+
         </div>
 
         {mensaje && (
@@ -367,6 +457,7 @@ function AdminCategorias() {
           <div className="admin-section-header">
 
             <div>
+
               <p className="admin-section-subtitle">
                 CATÁLOGO
               </p>
@@ -374,17 +465,46 @@ function AdminCategorias() {
               <h2>
                 Lista de categorías
               </h2>
+
             </div>
 
-            <button
-              type="button"
-              className="admin-primary-button"
-              onClick={manejarNuevaCategoria}
-            >
-              Nueva categoría
-            </button>
+            <div className="admin-category-header-actions">
+
+              <span className="admin-order-count">
+                {categoriasFiltradas.length}{' '}
+
+                {categoriasFiltradas.length === 1
+                  ? 'categoría'
+                  : 'categorías'}
+              </span>
+
+              <button
+                type="button"
+                className="admin-primary-button"
+                onClick={manejarNuevaCategoria}
+              >
+                Nueva categoría
+              </button>
+
+            </div>
 
           </div>
+
+          {/* FILTRO */}
+
+          <div className="admin-categories-filters">
+
+            <input
+              type="text"
+              className="admin-categories-search"
+              placeholder="Buscar por nombre o ID..."
+              value={busqueda}
+              onChange={cambiarBusqueda}
+            />
+
+          </div>
+
+          {/* FORMULARIO */}
 
           {mostrarFormulario && (
             <div className="admin-form-card">
@@ -392,6 +512,7 @@ function AdminCategorias() {
               <div className="admin-form-header">
 
                 <div>
+
                   <p className="admin-section-subtitle">
                     CATEGORÍA
                   </p>
@@ -401,12 +522,14 @@ function AdminCategorias() {
                       ? 'Editar categoría'
                       : 'Nueva categoría'}
                   </h2>
+
                 </div>
 
                 <button
                   type="button"
                   className="admin-close-button"
                   onClick={cerrarFormulario}
+                  disabled={guardando}
                 >
                   ×
                 </button>
@@ -474,95 +597,207 @@ function AdminCategorias() {
             </div>
           )}
 
-          <div className="admin-products-table">
+          {/* TABLA */}
 
-            <table>
+          {categorias.length === 0 ? (
 
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
+            <div className="admin-empty">
 
-              <tbody>
+              <p>
+                No hay categorías registradas.
+              </p>
 
-                {categorias.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={3}
-                      className="admin-empty"
-                    >
-                      No hay categorías registradas.
-                    </td>
-                  </tr>
-                ) : (
-                  categorias.map(
-                    (categoria) => (
-                      <tr
-                        key={categoria.id}
-                      >
+            </div>
 
-                        <td>
-                          {categoria.id}
-                        </td>
+          ) : categoriasFiltradas.length === 0 ? (
 
-                        <td>
-                          {categoria.nombre}
-                        </td>
+            <div className="admin-empty">
 
-                        <td>
+              <p>
+                No se han encontrado categorías
+                con esa búsqueda.
+              </p>
 
-                          <div className="admin-product-actions">
+            </div>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                manejarEditarCategoria(
-                                  categoria
-                                )
-                              }
-                            >
-                              Editar
-                            </button>
+          ) : (
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                manejarEliminarCategoria(
-                                  categoria
-                                )
-                              }
-                              disabled={
-                                eliminandoId ===
+            <>
+
+              <div className="admin-products-table">
+
+                <table>
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        ID
+                      </th>
+
+                      <th>
+                        Nombre
+                      </th>
+
+                      <th>
+                        Acciones
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {categoriasPagina.map(
+                      (categoria) => (
+
+                        <tr
+                          key={categoria.id}
+                        >
+
+                          <td>
+                            #{categoria.id}
+                          </td>
+
+                          <td>
+                            <strong>
+                              {categoria.nombre}
+                            </strong>
+                          </td>
+
+                          <td>
+
+                            <div className="admin-product-actions">
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  manejarEditarCategoria(
+                                    categoria
+                                  )
+                                }
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  manejarEliminarCategoria(
+                                    categoria
+                                  )
+                                }
+                                disabled={
+                                  eliminandoId ===
+                                  categoria.id
+                                }
+                              >
+                                {eliminandoId ===
                                 categoria.id
-                              }
-                            >
-                              {eliminandoId ===
-                              categoria.id
-                                ? 'Eliminando...'
-                                : 'Eliminar'}
-                            </button>
+                                  ? 'Eliminando...'
+                                  : 'Eliminar'}
+                              </button>
 
-                          </div>
+                            </div>
 
-                        </td>
+                          </td>
 
-                      </tr>
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+              {/* PAGINACIÓN */}
+
+              <div className="admin-pagination">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.max(
+                          pagina - 1,
+                          1
+                        )
                     )
-                  )
-                )}
+                  }
+                  disabled={
+                    paginaMostrada === 1
+                  }
+                >
+                  ← Anterior
+                </button>
 
-              </tbody>
+                <div className="admin-pagination-pages">
 
-            </table>
+                  {Array.from(
+                    {
+                      length: totalPaginas,
+                    },
+                    (_, indice) =>
+                      indice + 1
+                  ).map((pagina) => (
 
-          </div>
+                    <button
+                      key={pagina}
+                      type="button"
+                      className={
+                        pagina ===
+                        paginaMostrada
+                          ? 'active'
+                          : ''
+                      }
+                      onClick={() =>
+                        setPaginaActual(
+                          pagina
+                        )
+                      }
+                    >
+                      {pagina}
+                    </button>
+
+                  ))}
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPaginaActual(
+                      (pagina) =>
+                        Math.min(
+                          pagina + 1,
+                          totalPaginas
+                        )
+                    )
+                  }
+                  disabled={
+                    paginaMostrada ===
+                    totalPaginas
+                  }
+                >
+                  Siguiente →
+                </button>
+
+              </div>
+
+            </>
+
+          )}
 
         </section>
 
       </div>
+
     </main>
   );
 }
