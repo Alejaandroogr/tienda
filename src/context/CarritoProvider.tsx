@@ -5,6 +5,7 @@ import {
 } from 'react';
 
 import type { Producto } from '../types/Producto';
+import { toast } from 'sonner';
 import {
   CarritoContext,
   type ProductoCarrito,
@@ -70,6 +71,8 @@ export function CarritoProvider({
         },
       ];
     });
+
+    toast.success('Producto añadido al carrito');
   };
 
   const eliminarDelCarrito = (
@@ -81,6 +84,8 @@ export function CarritoProvider({
           item.producto.id !== id
       )
     );
+
+    toast.success('Producto eliminado del carrito');
   };
 
   const aumentarCantidad = (

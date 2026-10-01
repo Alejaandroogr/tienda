@@ -1,198 +1,53 @@
-import {
-  useState,
-  type FormEvent,
-} from 'react';
-
-import {
-  Link,
-  useNavigate,
-} from 'react-router-dom';
-
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Cpu, LockKeyhole, Mail } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { toast } from 'sonner';
 
 function Login() {
   const navigate = useNavigate();
-
   const { iniciarSesion } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  const [email, setEmail] =
-    useState('');
-
-  const [password, setPassword] =
-    useState('');
-
-  const [error, setError] =
-    useState('');
-
-  const [cargando, setCargando] =
-    useState(false);
-
-  const manejarLogin = async (
-    evento: FormEvent<HTMLFormElement>
-  ) => {
+  const manejarLogin = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-
-    setError('');
-
-    if (
-      email.trim() === '' ||
-      password === ''
-    ) {
-      setError(
-        'Todos los campos son obligatorios'
-      );
-
+    if (!email.trim() || !password) {
+      toast.error('Completa el correo electrónico y la contraseña');
       return;
     }
-
     try {
       setCargando(true);
-
-      const respuesta = await fetch(
-        'http://localhost/tienda/backend/usuarios/login.php',
-        {
-          method: 'POST',
-
-          headers: {
-            'Content-Type': 'application/json',
-          },
-
-          credentials: 'include',
-
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
-
-      const datos =
-        await respuesta.json();
-
+      const respuesta = await fetch('http://localhost/tienda/backend/usuarios/login.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email, password }),
+      });
+      const datos = await respuesta.json();
       if (!respuesta.ok) {
-        setError(
-          datos.error ||
-            'No se ha podido iniciar sesión'
-        );
-
+        toast.error(datos.error || 'No se ha podido iniciar sesión');
         return;
       }
-
-      /*
-       * Guardamos el usuario en el contexto.
-       *
-       * El backend ya ha creado la sesión PHP.
-       */
       iniciarSesion(datos.usuario);
-
-      /*
-       * Vamos directamente al inicio.
-       */
+      toast.success('Sesión iniciada correctamente');
       navigate('/');
-
     } catch {
-      setError(
-        'No se ha podido conectar con el servidor'
-      );
-    } finally {
-      setCargando(false);
+      toast.error('No se ha podido conectar con el servidor');
     }
+    finally { setCargando(false); }
   };
 
   return (
-    <main>
-      <div className="auth-container">
-
-        <div className="auth-card">
-
-          <p className="auth-subtitle">
-            BIENVENIDO DE NUEVO
-          </p>
-
-          <h1>
-            Iniciar sesión
-          </h1>
-
-          <p className="auth-description">
-            Accede a tu cuenta para gestionar tus
-            pedidos y continuar comprando.
-          </p>
-
-          <form
-            className="auth-form"
-            onSubmit={manejarLogin}
-          >
-
-            <div className="form-group">
-
-              <label htmlFor="email">
-                Correo electrónico
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(evento) =>
-                  setEmail(
-                    evento.target.value
-                  )
-                }
-                placeholder="correo@ejemplo.com"
-                autoComplete="email"
-              />
-
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="password">
-                Contraseña
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(evento) =>
-                  setPassword(
-                    evento.target.value
-                  )
-                }
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-
-            </div>
-
-            {error && (
-              <p className="auth-error">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={cargando}
-            >
-              {cargando
-                ? 'Iniciando sesión...'
-                : 'Iniciar sesión'}
-            </button>
-
-          </form>
-
-          <p className="auth-register">
-            ¿No tienes una cuenta?{' '}
-
-            <Link to="/registro">
-              Crear cuenta
-            </Link>
-          </p>
-
-        </div>
-
-      </div>
+    <main className="store-auth-page">
+      <div className="store-auth-aside"><div className="store-auth-brand"><Cpu size={24} /> TECHSTORE</div><p className="eyebrow">TECNOLOGÍA QUE TE MUEVE</p><h2>Tu próximo proyecto empieza aquí.</h2><p>Accede a tu cuenta para seguir tus pedidos y descubrir novedades pensadas para tu setup.</p><div className="store-auth-graphic"><Cpu size={118} strokeWidth={.8} /></div></div>
+      <div className="store-auth-form-wrap"><Card className="store-auth-card"><CardHeader><p className="eyebrow">BIENVENIDO DE NUEVO</p><CardTitle>Iniciar sesión</CardTitle><p>Accede para gestionar tus pedidos y continuar comprando.</p></CardHeader><CardContent><form className="store-form" onSubmit={manejarLogin}>
+        <div className="store-form-field"><Label htmlFor="email">Correo electrónico</Label><div className="store-input-icon"><Mail size={16} /><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" autoComplete="email" required /></div></div>
+        <div className="store-form-field"><Label htmlFor="password">Contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tu contraseña" autoComplete="current-password" required /></div></div>
+        <Button type="submit" size="lg" disabled={cargando}>{cargando ? 'Iniciando sesión…' : 'Iniciar sesión'} {!cargando && <ArrowRight size={16} />}</Button>
+      </form><p className="store-auth-switch">¿Todavía no tienes una cuenta? <Link to="/registro">Crear cuenta</Link></p></CardContent></Card></div>
     </main>
   );
 }

@@ -5,6 +5,16 @@ import {
 } from 'react';
 
 import { useAuth } from '../../context/useAuth';
+import AdminPagination from '../../components/admin/AdminPagination';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { toast } from 'sonner';
+import { Table } from '../../components/ui/table';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Skeleton } from '../../components/ui/skeleton';
 
 interface Categoria {
   id: number;
@@ -41,13 +51,18 @@ function AdminCategorias() {
   const [eliminandoId, setEliminandoId] =
     useState<number | null>(null);
 
+  const [categoriaPendienteEliminar, setCategoriaPendienteEliminar] = useState<Categoria | null>(null);
+
   const [busqueda, setBusqueda] =
     useState('');
 
   const [paginaActual, setPaginaActual] =
     useState(1);
 
-  const categoriasPorPagina = 10;
+  useEffect(() => { if (mensaje) toast.success(mensaje); }, [mensaje]);
+  useEffect(() => { if (error && !cargando) toast.error(error); }, [error, cargando]);
+
+  const categoriasPorPagina = 8;
 
   useEffect(() => {
     const cargarCategorias = async () => {
@@ -235,14 +250,6 @@ function AdminCategorias() {
   const manejarEliminarCategoria = async (
     categoria: Categoria
   ) => {
-    const confirmar = window.confirm(
-      `¿Seguro que quieres eliminar la categoría "${categoria.nombre}"?`
-    );
-
-    if (!confirmar) {
-      return;
-    }
-
     setError('');
     setMensaje('');
 
@@ -282,6 +289,7 @@ function AdminCategorias() {
         datos.mensaje ||
           'Categoría eliminada correctamente'
       );
+      setCategoriaPendienteEliminar(null);
 
     } catch (error) {
       if (error instanceof Error) {
@@ -333,18 +341,13 @@ function AdminCategorias() {
     totalPaginas
   );
 
-  const indiceUltimaCategoria =
-    paginaMostrada * categoriasPorPagina;
-
-  const indicePrimeraCategoria =
-    indiceUltimaCategoria -
-    categoriasPorPagina;
-
-  const categoriasPagina =
-    categoriasFiltradas.slice(
-      indicePrimeraCategoria,
-      indiceUltimaCategoria
-    );
+  const indiceInicio =
+    (paginaMostrada - 1) * categoriasPorPagina;
+  const indiceFin = indiceInicio + categoriasPorPagina;
+  const categoriasPagina = categoriasFiltradas.slice(
+    indiceInicio,
+    indiceFin
+  );
 
   const cambiarBusqueda = (
     evento: React.ChangeEvent<HTMLInputElement>
@@ -401,16 +404,10 @@ function AdminCategorias() {
 
   if (cargando) {
     return (
-      <main>
-
-        <div className="admin-message">
-
-          <p>
-            Cargando categorías...
-          </p>
-
+      <main className="admin-container">
+        <div className="admin-table-skeleton" aria-label="Cargando categorías" aria-busy="true">
+          {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}
         </div>
-
       </main>
     );
   }
@@ -440,18 +437,6 @@ function AdminCategorias() {
 
         </div>
 
-        {mensaje && (
-          <div className="admin-success-message">
-            {mensaje}
-          </div>
-        )}
-
-        {error && (
-          <div className="admin-error-message">
-            {error}
-          </div>
-        )}
-
         <section className="admin-products">
 
           <div className="admin-section-header">
@@ -478,13 +463,13 @@ function AdminCategorias() {
                   : 'categorías'}
               </span>
 
-              <button
+              <Button
                 type="button"
                 className="admin-primary-button"
                 onClick={manejarNuevaCategoria}
               >
                 Nueva categoría
-              </button>
+              </Button>
 
             </div>
 
@@ -494,7 +479,7 @@ function AdminCategorias() {
 
           <div className="admin-categories-filters">
 
-            <input
+            <Input
               type="text"
               className="admin-categories-search"
               placeholder="Buscar por nombre o ID..."
@@ -506,7 +491,9 @@ function AdminCategorias() {
 
           {/* FORMULARIO */}
 
-          {mostrarFormulario && (
+          <Dialog open={mostrarFormulario} onOpenChange={(open) => { if (!open && !guardando) cerrarFormulario(); }}>
+            <DialogContent className="admin-edit-dialog admin-category-dialog">
+              <DialogHeader><DialogTitle className="sr-only">{categoriaEditando ? 'Editar categoría' : 'Crear categoría'}</DialogTitle></DialogHeader>
             <div className="admin-form-card">
 
               <div className="admin-form-header">
@@ -525,14 +512,17 @@ function AdminCategorias() {
 
                 </div>
 
-                <button
+                <Button
                   type="button"
                   className="admin-close-button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Cerrar formulario"
                   onClick={cerrarFormulario}
                   disabled={guardando}
                 >
                   ×
-                </button>
+                </Button>
 
               </div>
 
@@ -547,11 +537,11 @@ function AdminCategorias() {
 
                   <div className="form-group admin-form-full">
 
-                    <label htmlFor="nombreCategoria">
+                    <Label htmlFor="nombreCategoria">
                       Nombre de la categoría
-                    </label>
+                    </Label>
 
-                    <input
+                    <Input
                       id="nombreCategoria"
                       type="text"
                       value={nombre}
@@ -569,16 +559,16 @@ function AdminCategorias() {
 
                 <div className="admin-form-actions">
 
-                  <button
+                  <Button
                     type="button"
                     className="admin-secondary-button"
                     onClick={cerrarFormulario}
                     disabled={guardando}
                   >
                     Cancelar
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     type="submit"
                     className="admin-primary-button"
                     disabled={guardando}
@@ -588,14 +578,15 @@ function AdminCategorias() {
                       : categoriaEditando
                         ? 'Guardar cambios'
                         : 'Crear categoría'}
-                  </button>
+                  </Button>
 
                 </div>
 
               </form>
 
             </div>
-          )}
+            </DialogContent>
+          </Dialog>
 
           {/* TABLA */}
 
@@ -626,7 +617,7 @@ function AdminCategorias() {
 
               <div className="admin-products-table">
 
-                <table>
+                <Table className="admin-data-table">
 
                   <thead>
 
@@ -662,32 +653,32 @@ function AdminCategorias() {
                           </td>
 
                           <td>
-                            <strong>
-                              {categoria.nombre}
-                            </strong>
+                            <Badge variant="secondary" className="category-name-badge">{categoria.nombre}</Badge>
                           </td>
 
                           <td>
 
                             <div className="admin-product-actions">
 
-                              <button
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 type="button"
                                 onClick={() =>
                                   manejarEditarCategoria(
                                     categoria
                                   )
                                 }
-                              >
-                                Editar
-                              </button>
+                                >
+                                  Editar
+                              </Button>
 
-                              <button
+                              <Button
+                                variant="destructive"
+                                size="sm"
                                 type="button"
                                 onClick={() =>
-                                  manejarEliminarCategoria(
-                                    categoria
-                                  )
+                                    setCategoriaPendienteEliminar(categoria)
                                 }
                                 disabled={
                                   eliminandoId ===
@@ -698,7 +689,7 @@ function AdminCategorias() {
                                 categoria.id
                                   ? 'Eliminando...'
                                   : 'Eliminar'}
-                              </button>
+                              </Button>
 
                             </div>
 
@@ -711,84 +702,18 @@ function AdminCategorias() {
 
                   </tbody>
 
-                </table>
+                </Table>
 
               </div>
 
               {/* PAGINACIÓN */}
 
-              <div className="admin-pagination">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.max(
-                          pagina - 1,
-                          1
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada === 1
-                  }
-                >
-                  ← Anterior
-                </button>
-
-                <div className="admin-pagination-pages">
-
-                  {Array.from(
-                    {
-                      length: totalPaginas,
-                    },
-                    (_, indice) =>
-                      indice + 1
-                  ).map((pagina) => (
-
-                    <button
-                      key={pagina}
-                      type="button"
-                      className={
-                        pagina ===
-                        paginaMostrada
-                          ? 'active'
-                          : ''
-                      }
-                      onClick={() =>
-                        setPaginaActual(
-                          pagina
-                        )
-                      }
-                    >
-                      {pagina}
-                    </button>
-
-                  ))}
-
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.min(
-                          pagina + 1,
-                          totalPaginas
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada ===
-                    totalPaginas
-                  }
-                >
-                  Siguiente →
-                </button>
-
-              </div>
+              <AdminPagination
+                paginaActual={paginaMostrada}
+                totalPaginas={totalPaginas}
+                alCambiarPagina={setPaginaActual}
+                ariaLabel="Paginación de categorías"
+              />
 
             </>
 
@@ -797,6 +722,19 @@ function AdminCategorias() {
         </section>
 
       </div>
+
+      <AlertDialog open={Boolean(categoriaPendienteEliminar)} onOpenChange={(open) => { if (!open) setCategoriaPendienteEliminar(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta categoría?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará “{categoriaPendienteEliminar?.nombre}”. Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={eliminandoId !== null} onClick={() => { if (categoriaPendienteEliminar) void manejarEliminarCategoria(categoriaPendienteEliminar); }}>Eliminar categoría</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </main>
   );

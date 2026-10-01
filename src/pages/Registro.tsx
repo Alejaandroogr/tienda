@@ -1,263 +1,59 @@
-import {
-  useState,
-  type FormEvent,
-} from 'react';
-
-import {
-  Link,
-  useNavigate,
-} from 'react-router-dom';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Cpu, LockKeyhole, Mail, UserRound } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { toast } from 'sonner';
 
 function Registro() {
   const navigate = useNavigate();
+  const [nombre, setNombre] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
 
-  const [nombre, setNombre] =
-    useState('');
-
-  const [email, setEmail] =
-    useState('');
-
-  const [password, setPassword] =
-    useState('');
-
-  const [confirmPassword, setConfirmPassword] =
-    useState('');
-
-  const [error, setError] =
-    useState('');
-
-  const [mensaje, setMensaje] =
-    useState('');
-
-  const [cargando, setCargando] =
-    useState(false);
-
-  const manejarRegistro = async (
-    evento: FormEvent<HTMLFormElement>
-  ) => {
+  const manejarRegistro = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-
-    setError('');
-    setMensaje('');
-
-    if (
-      nombre.trim() === '' ||
-      email.trim() === '' ||
-      password === '' ||
-      confirmPassword === ''
-    ) {
-      setError(
-        'Todos los campos son obligatorios'
-      );
-
+    if (!nombre.trim() || !email.trim() || !password || !confirmPassword) {
+      toast.error('Completa todos los campos');
       return;
     }
-
     if (password !== confirmPassword) {
-      setError(
-        'Las contraseñas no coinciden'
-      );
-
+      toast.error('Las contraseñas no coinciden');
       return;
     }
-
     try {
       setCargando(true);
-
-      const respuesta = await fetch(
-        'http://localhost/tienda/backend/usuarios/registrar.php',
-        {
-          method: 'POST',
-
-          headers: {
-            'Content-Type': 'application/json',
-          },
-
-          body: JSON.stringify({
-            nombre: nombre.trim(),
-            email: email.trim(),
-            password,
-          }),
-        }
-      );
-
-      const datos =
-        await respuesta.json();
-
+      const respuesta = await fetch('http://localhost/tienda/backend/usuarios/registrar.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), password }),
+      });
+      const datos = await respuesta.json();
       if (!respuesta.ok) {
-        setError(
-          datos.error ||
-            'No se ha podido registrar el usuario'
-        );
-
+        toast.error(datos.error || 'No se ha podido registrar el usuario');
         return;
       }
-
-      setMensaje(
-        datos.mensaje ||
-          'Usuario registrado correctamente'
-      );
-
-      setNombre('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-
-      setTimeout(() => {
-        navigate('/login');
-      }, 1500);
-
+      toast.success('Cuenta creada correctamente');
+      setNombre(''); setEmail(''); setPassword(''); setConfirmPassword('');
+      window.setTimeout(() => navigate('/login'), 1200);
     } catch {
-      setError(
-        'No se ha podido conectar con el servidor'
-      );
-    } finally {
-      setCargando(false);
+      toast.error('No se ha podido conectar con el servidor');
     }
+    finally { setCargando(false); }
   };
 
   return (
-    <main>
-      <div className="auth-container">
-
-        <div className="auth-card">
-
-          <p className="auth-subtitle">
-            CREA TU CUENTA
-          </p>
-
-          <h1>
-            Registrarse
-          </h1>
-
-          <p className="auth-description">
-            Crea una cuenta para gestionar tus
-            pedidos y realizar tus compras.
-          </p>
-
-          <form
-            className="auth-form"
-            onSubmit={manejarRegistro}
-          >
-
-            <div className="form-group">
-
-              <label htmlFor="nombre">
-                Nombre
-              </label>
-
-              <input
-                id="nombre"
-                type="text"
-                value={nombre}
-                onChange={(evento) =>
-                  setNombre(
-                    evento.target.value
-                  )
-                }
-                placeholder="Tu nombre"
-                autoComplete="name"
-              />
-
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="email">
-                Correo electrónico
-              </label>
-
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(evento) =>
-                  setEmail(
-                    evento.target.value
-                  )
-                }
-                placeholder="correo@ejemplo.com"
-                autoComplete="email"
-              />
-
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="password">
-                Contraseña
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(evento) =>
-                  setPassword(
-                    evento.target.value
-                  )
-                }
-                placeholder="••••••••"
-                autoComplete="new-password"
-              />
-
-            </div>
-
-            <div className="form-group">
-
-              <label htmlFor="confirmPassword">
-                Confirmar contraseña
-              </label>
-
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(evento) =>
-                  setConfirmPassword(
-                    evento.target.value
-                  )
-                }
-                placeholder="••••••••"
-                autoComplete="new-password"
-              />
-
-            </div>
-
-            {error && (
-              <p className="auth-error">
-                {error}
-              </p>
-            )}
-
-            {mensaje && (
-              <p className="auth-success">
-                {mensaje}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={cargando}
-            >
-              {cargando
-                ? 'Creando cuenta...'
-                : 'Crear cuenta'}
-            </button>
-
-          </form>
-
-          <p className="auth-register">
-            ¿Ya tienes una cuenta?{' '}
-
-            <Link to="/login">
-              Iniciar sesión
-            </Link>
-          </p>
-
-        </div>
-
-      </div>
+    <main className="store-auth-page">
+      <div className="store-auth-aside"><div className="store-auth-brand"><Cpu size={24} /> TECHSTORE</div><p className="eyebrow">ÚNETE A LA COMUNIDAD</p><h2>Mejor tecnología.<br />Mejor experiencia.</h2><p>Crea tu cuenta y mantén todos tus pedidos y compras organizados en un solo lugar.</p><div className="store-auth-graphic"><Cpu size={118} strokeWidth={.8} /></div></div>
+      <div className="store-auth-form-wrap"><Card className="store-auth-card"><CardHeader><p className="eyebrow">EMPIEZA EN TECHSTORE</p><CardTitle>Crear una cuenta</CardTitle><p>Completa tus datos para registrarte.</p></CardHeader><CardContent><form className="store-form" onSubmit={manejarRegistro}>
+        <div className="store-form-field"><Label htmlFor="nombre">Nombre</Label><div className="store-input-icon"><UserRound size={16} /><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" autoComplete="name" required /></div></div>
+        <div className="store-form-field"><Label htmlFor="email">Correo electrónico</Label><div className="store-input-icon"><Mail size={16} /><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" autoComplete="email" required /></div></div>
+        <div className="store-form-field"><Label htmlFor="password">Contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Crea una contraseña" autoComplete="new-password" required /></div></div>
+        <div className="store-form-field"><Label htmlFor="confirmPassword">Confirmar contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite tu contraseña" autoComplete="new-password" required /></div></div>
+        <Button type="submit" size="lg" disabled={cargando}>{cargando ? 'Creando cuenta…' : 'Crear cuenta'} {!cargando && <ArrowRight size={16} />}</Button>
+      </form><p className="store-auth-switch">¿Ya tienes una cuenta? <Link to="/login">Iniciar sesión</Link></p></CardContent></Card></div>
     </main>
   );
 }

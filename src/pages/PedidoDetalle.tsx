@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
-import {
-  Link,
-  useNavigate,
-  useParams,
-} from 'react-router-dom';
-
+import { ArrowLeft } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
+import { Skeleton } from '../components/ui/skeleton';
+import { Table } from '../components/ui/table';
 
 interface DetallePedido {
   id: number;
@@ -25,69 +28,131 @@ interface Pedido {
   detalles: DetallePedido[];
 }
 
+interface RespuestaPedido {
+  error?: string;
+  pedido?: Omit<Pedido, 'detalles'>;
+  detalles?: DetallePedido[];
+}
+
+function obtenerVarianteEstado(
+  estado: string,
+): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (estado === 'entregado') return 'secondary';
+  if (estado === 'cancelado') return 'destructive';
+  if (estado === 'enviado') return 'default';
+  return 'outline';
+}
+
 function PedidoDetalle() {
   const { id } = useParams();
   const { usuario } = useAuth();
-  const navigate = useNavigate();
-
-  const [pedido, setPedido] =
-    useState<Pedido | null>(null);
-
-  const [cargando, setCargando] =
-    useState(true);
-
-  const [error, setError] =
-    useState('');
+  const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!usuario) {
-      navigate('/login');
       return;
     }
 
-    const obtenerPedido = async () => {
-      try {
-        setCargando(true);
-        setError('');
+    const controlador = new AbortController();
 
+    const cargarPedido = async () => {
+      setCargando(true);
+      setError('');
+      setPedido(null);
+
+      try {
         const respuesta = await fetch(
-          `http://localhost/tienda/backend/pedidos/obtener.php?id=${id}&usuario_id=${usuario.id}`
+          `http://localhost/tienda/backend/pedidos/obtener.php?id=${id}`,
+          {
+            credentials: 'include',
+            signal: controlador.signal,
+          },
         );
 
-        const datos = await respuesta.json();
+        let datos: RespuestaPedido;
 
-        if (!respuesta.ok) {
-          setError(
-            datos.error ||
-              'No se ha podido obtener el pedido'
-          );
+        try {
+          datos = (await respuesta.json()) as RespuestaPedido;
+        } catch {
+          setError('No se ha podido cargar el pedido');
           return;
         }
 
-        setPedido(datos);
-      } catch {
-        setError(
-          'No se ha podido conectar con el servidor'
-        );
+        if (respuesta.status === 401) {
+          setError('Debes iniciar sesión');
+          return;
+        }
+
+        if (respuesta.status === 403) {
+          setError('No tienes permiso para consultar este pedido');
+          return;
+        }
+
+        if (respuesta.status === 404) {
+          setError('Pedido no encontrado');
+          return;
+        }
+
+        if (!respuesta.ok) {
+          setError('No se ha podido cargar el pedido');
+          return;
+        }
+
+        if (!datos.pedido || !Array.isArray(datos.detalles)) {
+          setError('No se ha podido cargar el pedido');
+          return;
+        }
+
+        setPedido({
+          ...datos.pedido,
+          detalles: datos.detalles,
+        });
+      } catch (errorPeticion) {
+        if (
+          errorPeticion instanceof DOMException &&
+          errorPeticion.name === 'AbortError'
+        ) {
+          return;
+        }
+
+        setError('No se ha podido conectar con el servidor');
       } finally {
-        setCargando(false);
+        if (!controlador.signal.aborted) {
+          setCargando(false);
+        }
       }
     };
 
-    obtenerPedido();
-  }, [id, usuario, navigate]);
+    void cargarPedido();
+
+    return () => controlador.abort();
+  }, [id, usuario]);
 
   if (!usuario) {
-    return null;
+    return (
+      <main className="order-detail-page">
+        <div className="order-detail-container order-detail-error-state">
+          <Alert variant="destructive">
+            <AlertTitle>Debes iniciar sesión</AlertTitle>
+            <AlertDescription>
+              Inicia sesión para consultar los pedidos de tu cuenta.
+            </AlertDescription>
+          </Alert>
+          <Button render={<Link to="/login" />}>Iniciar sesión</Button>
+        </div>
+      </main>
+    );
   }
 
   if (cargando) {
     return (
-      <main>
-        <div className="order-detail-message">
-          <p>
-            Cargando pedido...
-          </p>
+      <main className="order-detail-page">
+        <div className="order-detail-container">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-72 w-full" />
         </div>
       </main>
     );
@@ -95,173 +160,136 @@ function PedidoDetalle() {
 
   if (error || !pedido) {
     return (
-      <main>
-        <div className="order-detail-message order-detail-error">
-          <h2>
-            No se ha podido cargar el pedido
-          </h2>
-
-          <p>
-            {error ||
-              'El pedido no existe.'}
-          </p>
-
-          <Link
-            to="/pedidos"
-            className="empty-cart-button"
-          >
-            ← Volver a mis pedidos
-          </Link>
+      <main className="order-detail-page">
+        <div className="order-detail-container order-detail-error-state">
+          <Alert variant="destructive">
+            <AlertTitle>{error || 'No se ha podido cargar el pedido'}</AlertTitle>
+            <AlertDescription>
+              {error === 'Pedido no encontrado'
+                ? 'Comprueba el número del pedido e inténtalo de nuevo.'
+                : error === 'Debes iniciar sesión'
+                  ? 'Inicia sesión para consultar los pedidos de tu cuenta.'
+                  : error === 'No tienes permiso para consultar este pedido'
+                    ? 'Solo puedes consultar los pedidos asociados a tu cuenta.'
+                    : 'Inténtalo de nuevo más tarde.'}
+            </AlertDescription>
+          </Alert>
+          {error === 'Debes iniciar sesión' ? (
+            <Button render={<Link to="/login" />}>Iniciar sesión</Button>
+          ) : null}
+          <Button variant="outline" render={<Link to="/pedidos" />}>
+            <ArrowLeft /> Volver a mis pedidos
+          </Button>
         </div>
       </main>
     );
   }
 
+  const unidades = pedido.detalles.reduce(
+    (total, detalle) => total + detalle.cantidad,
+    0,
+  );
+
   return (
-    <main>
-      <div className="order-detail-container">
-        <div className="order-detail-header">
+    <main className="order-detail-page">
+      <div className="order-detail-container order-detail-redesign">
+        <header className="order-detail-header">
           <div>
-            <p className="cart-subtitle">
-              DETALLE DEL PEDIDO
-            </p>
-
-            <h1>
-              Pedido #{pedido.id}
-            </h1>
-
+            <p className="eyebrow">DETALLE DEL PEDIDO</p>
+            <h1>Pedido #{pedido.id}</h1>
             <p>
               Realizado el{' '}
-              {new Date(
-                pedido.creado_en
-              ).toLocaleDateString(
-                'es-ES'
-              )}
+              {new Date(pedido.creado_en).toLocaleDateString('es-ES')}
             </p>
           </div>
-
-          <Link
-            to="/pedidos"
-            className="continue-shopping"
+          <Badge
+            variant={obtenerVarianteEstado(pedido.estado)}
+            className={`order-status order-status-${pedido.estado}`}
           >
-            ← Mis pedidos
-          </Link>
-        </div>
+            {pedido.estado}
+          </Badge>
+        </header>
 
-        <div className="order-detail-layout">
-          <section className="order-detail-products">
-            <div className="order-detail-section-header">
-              <h2>
-                Productos
-              </h2>
+        <Card className="order-detail-metadata">
+          <div>
+            <span>Cliente</span>
+            <strong>{usuario.nombre}</strong>
+          </div>
+          <div>
+            <span>Fecha del pedido</span>
+            <strong>
+              {new Date(pedido.creado_en).toLocaleDateString('es-ES')}
+            </strong>
+          </div>
+          <div>
+            <span>Unidades</span>
+            <strong>{unidades}</strong>
+          </div>
+          <div>
+            <span>Total del pedido</span>
+            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+          </div>
+        </Card>
 
-              <span
-                className={`order-status order-status-${pedido.estado}`}
-              >
-                {pedido.estado}
-              </span>
+        <Card className="order-detail-table-card">
+          <div className="order-detail-card-heading">
+            <div>
+              <p className="eyebrow">RESUMEN</p>
+              <h2>Productos del pedido</h2>
             </div>
-
-            <div className="order-detail-list">
-              {pedido.detalles.map(
-                (detalle) => (
-                  <article
-                    className="order-detail-product"
-                    key={detalle.id}
-                  >
-                    <div className="order-detail-product-image">
-                      {detalle.imagen ? (
-                        <img
-                          src={detalle.imagen}
-                          alt={
-                            detalle.nombre
-                          }
-                        />
-                      ) : (
-                        <span>
-                          Sin imagen
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="order-detail-product-info">
-                      <h3>
-                        {detalle.nombre}
-                      </h3>
-
-                      <p>
-                        Cantidad:{' '}
-                        {detalle.cantidad}
-                      </p>
-
-                      <p>
-                        Precio unitario:{' '}
-                        {Number(
-                          detalle.precio
-                        ).toFixed(2)}{' '}
-                        €
-                      </p>
-                    </div>
-
-                    <strong>
+            <Badge
+              variant={obtenerVarianteEstado(pedido.estado)}
+              className={`order-status order-status-${pedido.estado}`}
+            >
+              {pedido.estado}
+            </Badge>
+          </div>
+          <Separator />
+          <div className="order-detail-table-scroll">
+            <Table className="order-detail-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedido.detalles.map((detalle) => (
+                  <tr key={detalle.id}>
+                    <td>
+                      <div className="order-detail-table-product">
+                        {detalle.imagen ? (
+                          <img src={detalle.imagen} alt="" />
+                        ) : (
+                          <span className="order-detail-table-placeholder" />
+                        )}
+                        <strong>{detalle.nombre}</strong>
+                      </div>
+                    </td>
+                    <td>{detalle.cantidad}</td>
+                    <td>{Number(detalle.precio).toFixed(2)} €</td>
+                    <td>
                       {(
-                        Number(
-                          detalle.precio
-                        ) *
-                        detalle.cantidad
+                        Number(detalle.precio) * detalle.cantidad
                       ).toFixed(2)}{' '}
                       €
-                    </strong>
-                  </article>
-                )
-              )}
-            </div>
-          </section>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+          <div className="order-detail-total-row">
+            <span>Total del pedido</span>
+            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+          </div>
+        </Card>
 
-          <aside className="order-detail-summary">
-            <h2>
-              Resumen
-            </h2>
-
-            <div className="order-detail-summary-row">
-              <span>
-                Productos
-              </span>
-
-              <span>
-                {pedido.detalles.reduce(
-                  (total, detalle) =>
-                    total +
-                    detalle.cantidad,
-                  0
-                )}
-              </span>
-            </div>
-
-            <div className="order-detail-summary-row">
-              <span>
-                Estado
-              </span>
-
-              <span className="order-status">
-                {pedido.estado}
-              </span>
-            </div>
-
-            <div className="order-detail-summary-total">
-              <span>
-                Total
-              </span>
-
-              <strong>
-                {Number(
-                  pedido.total
-                ).toFixed(2)}{' '}
-                €
-              </strong>
-            </div>
-          </aside>
-        </div>
+        <Button variant="outline" render={<Link to="/pedidos" />}>
+          <ArrowLeft /> Volver a mis pedidos
+        </Button>
       </div>
     </main>
   );

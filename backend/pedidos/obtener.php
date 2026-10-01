@@ -89,6 +89,26 @@ try {
     $pedido = $stmtPedido->fetch(PDO::FETCH_ASSOC);
 
     if (!$pedido) {
+        $stmtExistencia = $pdo->prepare(
+            'SELECT id FROM pedidos WHERE id = :pedido_id LIMIT 1'
+        );
+
+        $stmtExistencia->execute([
+            ':pedido_id' => $pedidoId
+        ]);
+
+        $pedidoExiste = $stmtExistencia->fetch(PDO::FETCH_ASSOC);
+
+        if ($pedidoExiste) {
+            http_response_code(403);
+
+            echo json_encode([
+                'error' => 'No tienes permiso para consultar este pedido'
+            ]);
+
+            exit;
+        }
+
         http_response_code(404);
 
         echo json_encode([

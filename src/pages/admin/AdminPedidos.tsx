@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/useAuth';
+import AdminPagination from '../../components/admin/AdminPagination';
+import { Badge } from '../../components/ui/badge';
+import { Input } from '../../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Table } from '../../components/ui/table';
+import { toast } from 'sonner';
 
 interface PedidoAdmin {
   id: number;
@@ -26,13 +33,17 @@ function AdminPedidos() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [actualizandoId, setActualizandoId] = useState<number | null>(null);
 
   const [busqueda, setBusqueda] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState('');
 
   const [paginaActual, setPaginaActual] = useState(1);
 
-  const pedidosPorPagina = 10;
+  const pedidosPorPagina = 8;
+
+  useEffect(() => { if (mensaje) toast.success(mensaje); }, [mensaje]);
+  useEffect(() => { if (error) toast.error(error); }, [error]);
 
   useEffect(() => {
     const obtenerPedidos = async () => {
@@ -78,6 +89,7 @@ function AdminPedidos() {
     nuevoEstado: string
   ) => {
     try {
+      setActualizandoId(pedidoId);
       setMensaje('');
       setError('');
 
@@ -122,6 +134,8 @@ function AdminPedidos() {
       } else {
         setError('No se ha podido cambiar el estado');
       }
+    } finally {
+      setActualizandoId(null);
     }
   };
 
@@ -169,28 +183,18 @@ function AdminPedidos() {
     totalPaginas
   );
 
-  const indiceUltimoPedido =
-    paginaMostrada * pedidosPorPagina;
-
-  const indicePrimerPedido =
-    indiceUltimoPedido - pedidosPorPagina;
-
+  const indiceInicio =
+    (paginaMostrada - 1) * pedidosPorPagina;
+  const indiceFin = indiceInicio + pedidosPorPagina;
   const pedidosPagina = pedidosFiltrados.slice(
-    indicePrimerPedido,
-    indiceUltimoPedido
+    indiceInicio,
+    indiceFin
   );
 
   const cambiarBusqueda = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     setBusqueda(event.target.value);
-    setPaginaActual(1);
-  };
-
-  const cambiarFiltroEstado = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setEstadoFiltro(event.target.value);
     setPaginaActual(1);
   };
 
@@ -213,7 +217,7 @@ function AdminPedidos() {
   if (cargando) {
     return (
       <main className="admin-container">
-        <p>Cargando pedidos...</p>
+        <div className="admin-table-skeleton" aria-label="Cargando pedidos" aria-busy="true">{Array.from({ length: 6 }, (_, row) => <Skeleton key={row} className="h-12 w-full" />)}</div>
       </main>
     );
   }
@@ -242,18 +246,6 @@ function AdminPedidos() {
         </span>
       </div>
 
-      {mensaje && (
-        <div className="admin-success">
-          {mensaje}
-        </div>
-      )}
-
-      {error && (
-        <div className="admin-error">
-          {error}
-        </div>
-      )}
-
       <section className="admin-section admin-orders">
         <div className="admin-section-header">
           <div>
@@ -262,7 +254,7 @@ function AdminPedidos() {
         </div>
 
         <div className="admin-orders-filters">
-          <input
+          <Input
             type="text"
             className="admin-orders-search"
             placeholder="Buscar por cliente, email o ID..."
@@ -270,25 +262,13 @@ function AdminPedidos() {
             onChange={cambiarBusqueda}
           />
 
-          <select
-            className="admin-orders-status-filter"
-            value={estadoFiltro}
-            onChange={cambiarFiltroEstado}
-          >
-            <option value="">
-              Todos los estados
-            </option>
-
-            {estados.map((estado) => (
-              <option
-                key={estado}
-                value={estado}
-              >
-                {estado.charAt(0).toUpperCase() +
-                  estado.slice(1)}
-              </option>
-            ))}
-          </select>
+          <Select value={estadoFiltro || 'todos'} onValueChange={(value) => { setEstadoFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
+            <SelectTrigger className="admin-filter-select"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos los estados</SelectItem>
+              {estados.map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         {pedidos.length === 0 ? (
@@ -305,7 +285,7 @@ function AdminPedidos() {
         ) : (
           <>
             <div className="admin-table-wrapper">
-              <table className="admin-products-table">
+              <Table className="admin-products-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -351,87 +331,26 @@ function AdminPedidos() {
                       </td>
 
                       <td>
-                        <select
-                          className={`admin-order-status status-${pedido.estado}`}
-                          value={pedido.estado}
-                          onChange={(event) =>
-                            cambiarEstado(
-                              pedido.id,
-                              event.target.value
-                            )
-                          }
-                        >
-                          {estados.map((estado) => (
-                            <option
-                              key={estado}
-                              value={estado}
-                            >
-                              {estado
-                                .charAt(0)
-                                .toUpperCase() +
-                                estado.slice(1)}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="admin-order-state-cell">
+                        <Badge variant={pedido.estado === 'cancelado' ? 'destructive' : pedido.estado === 'entregado' ? 'secondary' : pedido.estado === 'enviado' ? 'default' : 'outline'} className={`admin-state-badge state-${pedido.estado}`}>{pedido.estado}</Badge>
+                        <Select value={pedido.estado} onValueChange={(value) => { if (value) void cambiarEstado(pedido.id, value); }}>
+                          <SelectTrigger className={`admin-order-status status-${pedido.estado}`} disabled={actualizandoId === pedido.id}><SelectValue /></SelectTrigger>
+                          <SelectContent>{estados.map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}</SelectContent>
+                        </Select>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
 
-            <div className="admin-pagination">
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaActual((pagina) =>
-                    Math.max(pagina - 1, 1)
-                  )
-                }
-                disabled={paginaMostrada === 1}
-              >
-                ← Anterior
-              </button>
-
-              <div className="admin-pagination-pages">
-                {Array.from(
-                  { length: totalPaginas },
-                  (_, indice) => indice + 1
-                ).map((pagina) => (
-                  <button
-                    key={pagina}
-                    type="button"
-                    className={
-                      pagina === paginaMostrada
-                        ? 'active'
-                        : ''
-                    }
-                    onClick={() =>
-                      setPaginaActual(pagina)
-                    }
-                  >
-                    {pagina}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setPaginaActual((pagina) =>
-                    Math.min(
-                      pagina + 1,
-                      totalPaginas
-                    )
-                  )
-                }
-                disabled={
-                  paginaMostrada === totalPaginas
-                }
-              >
-                Siguiente →
-              </button>
-            </div>
+            <AdminPagination
+              paginaActual={paginaMostrada}
+              totalPaginas={totalPaginas}
+              alCambiarPagina={setPaginaActual}
+              ariaLabel="Paginación de pedidos"
+            />
           </>
         )}
       </section>

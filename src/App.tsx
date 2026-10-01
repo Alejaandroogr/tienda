@@ -8,6 +8,7 @@ import ProductoDetalle from './pages/ProductoDetalle';
 import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { Toaster } from './components/ui/sonner';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
 import Checkout from './pages/Checkout';
@@ -26,6 +27,7 @@ function App() {
     <AuthProvider>
       <CarritoProvider>
         <BrowserRouter>
+          <Toaster />
           <Navbar />
 
           <Routes>

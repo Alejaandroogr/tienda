@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
+import { PackageSearch } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/useAuth';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Skeleton } from '../components/ui/skeleton';
+
+function variantEstado(estado: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (estado === 'entregado') return 'secondary';
+  if (estado === 'cancelado') return 'destructive';
+  if (estado === 'enviado') return 'default';
+  return 'outline';
+}
 
 interface Pedido {
   id: number;
@@ -90,43 +103,27 @@ function Pedidos() {
         </div>
 
         {cargando && (
-          <div className="orders-message">
-            <p>
-              Cargando pedidos...
-            </p>
+          <div className="orders-loading" aria-label="Cargando pedidos" aria-busy="true">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
           </div>
         )}
 
         {error && (
-          <div className="orders-message orders-error">
-            <p>{error}</p>
-          </div>
+          <Alert variant="destructive" className="orders-error-alert">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {!cargando &&
           !error &&
           pedidos.length === 0 && (
-            <div className="orders-empty">
-              <div className="empty-cart-icon">
-                📦
-              </div>
-
-              <h2>
-                Todavía no tienes pedidos
-              </h2>
-
-              <p>
-                Cuando realices una compra,
-                aparecerá aquí.
-              </p>
-
-              <Link
-                to="/"
-                className="empty-cart-button"
-              >
-                Ver productos
-              </Link>
-            </div>
+            <Card className="orders-empty">
+              <PackageSearch size={38} aria-hidden="true" />
+              <h2>Todavía no tienes pedidos</h2>
+              <p>Cuando realices una compra, aparecerá aquí.</p>
+              <Button render={<Link to="/" />}>Ver productos</Button>
+            </Card>
           )}
 
         {!cargando &&
@@ -134,7 +131,7 @@ function Pedidos() {
           pedidos.length > 0 && (
             <div className="orders-list">
               {pedidos.map((pedido) => (
-                <article
+                <Card
                   className="order-card"
                   key={pedido.id}
                 >
@@ -168,11 +165,9 @@ function Pedidos() {
                         Estado
                       </span>
 
-                      <span
-                        className={`order-status order-status-${pedido.estado}`}
-                      >
+                      <Badge variant={variantEstado(pedido.estado)} className={`order-status order-status-${pedido.estado}`}>
                         {pedido.estado}
-                      </span>
+                      </Badge>
                     </div>
 
                     <div>
@@ -190,14 +185,9 @@ function Pedidos() {
                   </div>
 
                   <div className="order-card-actions">
-                    <Link
-                      to={`/pedidos/${pedido.id}`}
-                      className="order-view-button"
-                    >
-                      Ver pedido
-                    </Link>
+                    <Button render={<Link to={`/pedidos/${pedido.id}`} />} className="order-view-button">Ver pedido</Button>
                   </div>
-                </article>
+                </Card>
               ))}
             </div>
           )}

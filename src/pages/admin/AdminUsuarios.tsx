@@ -4,6 +4,13 @@ import {
 } from 'react';
 
 import { useAuth } from '../../context/useAuth';
+import AdminPagination from '../../components/admin/AdminPagination';
+import { Badge } from '../../components/ui/badge';
+import { Input } from '../../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
+import { Table } from '../../components/ui/table';
+import { toast } from 'sonner';
 
 interface UsuarioAdmin {
   id: number;
@@ -40,7 +47,12 @@ function AdminUsuarios() {
   const [paginaActual, setPaginaActual] =
     useState(1);
 
-  const usuariosPorPagina = 10;
+  const usuariosPorPagina = 8;
+
+  useEffect(() => { if (mensaje) toast.success(mensaje); }, [mensaje]);
+  useEffect(() => {
+    if (error) toast.error(error);
+  }, [error]);
 
   useEffect(() => {
     const cargarUsuarios = async () => {
@@ -89,6 +101,12 @@ function AdminUsuarios() {
     usuarioId: number,
     nuevoRol: 'cliente' | 'admin'
   ) => {
+    if (!usuario) return;
+    if (usuarioId === usuario.id) {
+      setError('No puedes cambiar el rol de tu propia cuenta.');
+      return;
+    }
+
     setError('');
     setMensaje('');
 
@@ -208,18 +226,13 @@ function AdminUsuarios() {
     totalPaginas
   );
 
-  const indiceUltimoUsuario =
-    paginaMostrada * usuariosPorPagina;
-
-  const indicePrimerUsuario =
-    indiceUltimoUsuario -
-    usuariosPorPagina;
-
-  const usuariosPagina =
-    usuariosFiltrados.slice(
-      indicePrimerUsuario,
-      indiceUltimoUsuario
-    );
+  const indiceInicio =
+    (paginaMostrada - 1) * usuariosPorPagina;
+  const indiceFin = indiceInicio + usuariosPorPagina;
+  const usuariosPagina = usuariosFiltrados.slice(
+    indiceInicio,
+    indiceFin
+  );
 
   /*
    * CAMBIAR BÚSQUEDA
@@ -228,16 +241,6 @@ function AdminUsuarios() {
     evento: React.ChangeEvent<HTMLInputElement>
   ) => {
     setBusqueda(evento.target.value);
-    setPaginaActual(1);
-  };
-
-  /*
-   * CAMBIAR FILTRO DE ROL
-   */
-  const cambiarFiltroRol = (
-    evento: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setRolFiltro(evento.target.value);
     setPaginaActual(1);
   };
 
@@ -287,32 +290,7 @@ function AdminUsuarios() {
     return (
       <main>
 
-        <div className="admin-message">
-
-          <p>
-            Cargando usuarios...
-          </p>
-
-        </div>
-
-      </main>
-    );
-  }
-
-  if (
-    error &&
-    usuarios.length === 0
-  ) {
-    return (
-      <main>
-
-        <div className="admin-message admin-error">
-
-          <p>
-            {error}
-          </p>
-
-        </div>
+        <div className="admin-message admin-table-skeleton" aria-label="Cargando usuarios" aria-busy="true">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}</div>
 
       </main>
     );
@@ -343,18 +321,6 @@ function AdminUsuarios() {
           </div>
 
         </div>
-
-        {mensaje && (
-          <div className="admin-success-message">
-            {mensaje}
-          </div>
-        )}
-
-        {error && (
-          <div className="admin-error-message">
-            {error}
-          </div>
-        )}
 
         <section className="admin-users">
 
@@ -388,7 +354,7 @@ function AdminUsuarios() {
 
           <div className="admin-users-filters">
 
-            <input
+            <Input
               type="text"
               className="admin-users-search"
               placeholder="Buscar por nombre, email o ID..."
@@ -396,25 +362,10 @@ function AdminUsuarios() {
               onChange={cambiarBusqueda}
             />
 
-            <select
-              className="admin-users-role-filter"
-              value={rolFiltro}
-              onChange={cambiarFiltroRol}
-            >
-
-              <option value="">
-                Todos los roles
-              </option>
-
-              <option value="cliente">
-                Clientes
-              </option>
-
-              <option value="admin">
-                Administradores
-              </option>
-
-            </select>
+            <Select value={rolFiltro || 'todos'} onValueChange={(value) => { setRolFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
+              <SelectTrigger className="admin-filter-select"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="todos">Todos los roles</SelectItem><SelectItem value="cliente">Clientes</SelectItem><SelectItem value="admin">Administradores</SelectItem></SelectContent>
+            </Select>
 
           </div>
 
@@ -445,7 +396,7 @@ function AdminUsuarios() {
 
               <div className="admin-products-table">
 
-                <table>
+                <Table className="admin-data-table">
 
                   <thead>
 
@@ -514,39 +465,14 @@ function AdminUsuarios() {
 
                           <td>
 
-                            <select
-                              className={`admin-user-role role-${usuarioActual.rol}`}
-                              value={
-                                usuarioActual.rol
-                              }
-                              disabled={
-                                usuarioActual.id ===
-                                  usuario.id ||
-                                actualizandoId ===
-                                  usuarioActual.id
-                              }
-                              onChange={(
-                                evento
-                              ) =>
-                                cambiarRol(
-                                  usuarioActual.id,
-                                  evento.target
-                                    .value as
-                                    | 'cliente'
-                                    | 'admin'
-                                )
-                              }
-                            >
-
-                              <option value="cliente">
-                                Cliente
-                              </option>
-
-                              <option value="admin">
-                                Administrador
-                              </option>
-
-                            </select>
+                            <div className="admin-user-role-cell">
+                              <Badge variant={usuarioActual.rol === 'admin' ? 'default' : 'secondary'} className={`role-badge role-${usuarioActual.rol}`}>{usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</Badge>
+                              <Select value={usuarioActual.rol} disabled={usuarioActual.id === usuario.id || actualizandoId === usuarioActual.id} onValueChange={(value) => { if (value === 'cliente' || value === 'admin') void cambiarRol(usuarioActual.id, value); }}>
+                                <SelectTrigger className="admin-role-select" aria-label={`Cambiar rol de ${usuarioActual.nombre}`}><SelectValue /></SelectTrigger>
+                                <SelectContent><SelectItem value="cliente">Cliente</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent>
+                              </Select>
+                              {usuarioActual.id === usuario.id && <small className="admin-self-role-note">Tu cuenta</small>}
+                            </div>
 
                           </td>
 
@@ -557,84 +483,18 @@ function AdminUsuarios() {
 
                   </tbody>
 
-                </table>
+                </Table>
 
               </div>
 
               {/* PAGINACIÓN */}
 
-              <div className="admin-pagination">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.max(
-                          pagina - 1,
-                          1
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada === 1
-                  }
-                >
-                  ← Anterior
-                </button>
-
-                <div className="admin-pagination-pages">
-
-                  {Array.from(
-                    {
-                      length: totalPaginas,
-                    },
-                    (_, indice) =>
-                      indice + 1
-                  ).map((pagina) => (
-
-                    <button
-                      key={pagina}
-                      type="button"
-                      className={
-                        pagina ===
-                        paginaMostrada
-                          ? 'active'
-                          : ''
-                      }
-                      onClick={() =>
-                        setPaginaActual(
-                          pagina
-                        )
-                      }
-                    >
-                      {pagina}
-                    </button>
-
-                  ))}
-
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.min(
-                          pagina + 1,
-                          totalPaginas
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada ===
-                    totalPaginas
-                  }
-                >
-                  Siguiente →
-                </button>
-
-              </div>
+              <AdminPagination
+                paginaActual={paginaMostrada}
+                totalPaginas={totalPaginas}
+                alCambiarPagina={setPaginaActual}
+                ariaLabel="Paginación de usuarios"
+              />
 
             </>
 

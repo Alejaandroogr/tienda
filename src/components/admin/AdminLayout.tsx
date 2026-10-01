@@ -15,10 +15,10 @@ function AdminLayout() {
   }
 
   return (
-    <>
+    <div className="admin-workspace">
       <AdminNavbar />
-      <Outlet />
-    </>
+      <div className="admin-workspace-content"><Outlet /></div>
+    </div>
   );
 }
 

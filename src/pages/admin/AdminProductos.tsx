@@ -6,6 +6,18 @@ import {
 
 import { useAuth } from '../../context/useAuth';
 import type { Producto } from '../../types/Producto';
+import AdminPagination from '../../components/admin/AdminPagination';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { toast } from 'sonner';
+import { Table } from '../../components/ui/table';
+import { Badge } from '../../components/ui/badge';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Textarea } from '../../components/ui/textarea';
+import { Button } from '../../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Skeleton } from '../../components/ui/skeleton';
 
 interface Categoria {
   id: number;
@@ -60,6 +72,8 @@ function AdminProductos() {
   const [eliminandoId, setEliminandoId] =
     useState<number | null>(null);
 
+  const [productoPendienteEliminar, setProductoPendienteEliminar] = useState<Producto | null>(null);
+
   const [busqueda, setBusqueda] =
     useState('');
 
@@ -69,7 +83,12 @@ function AdminProductos() {
   const [paginaActual, setPaginaActual] =
     useState(1);
 
-  const productosPorPagina = 10;
+  useEffect(() => { if (mensaje) toast.success(mensaje); }, [mensaje]);
+  useEffect(() => {
+    if (error && !cargando) toast.error(error);
+  }, [error, cargando]);
+
+  const productosPorPagina = 8;
 
   /*
    * CARGAR PRODUCTOS Y CATEGORÍAS
@@ -175,18 +194,16 @@ function AdminProductos() {
     totalPaginas
   );
 
-  const indiceUltimoProducto =
-    paginaMostrada * productosPorPagina;
+  const indiceInicio =
+    (paginaMostrada - 1) * productosPorPagina;
 
-  const indicePrimerProducto =
-    indiceUltimoProducto -
-    productosPorPagina;
+  const indiceFin =
+    indiceInicio + productosPorPagina;
 
-  const productosPagina =
-    productosFiltrados.slice(
-      indicePrimerProducto,
-      indiceUltimoProducto
-    );
+  const productosPagina = productosFiltrados.slice(
+    indiceInicio,
+    indiceFin
+  );
 
   /*
    * LIMPIAR FORMULARIO
@@ -508,14 +525,6 @@ function AdminProductos() {
   const manejarEliminarProducto = async (
     producto: Producto
   ) => {
-    const confirmar = window.confirm(
-      `¿Seguro que quieres eliminar "${producto.nombre}"? Esta acción no se puede deshacer.`
-    );
-
-    if (!confirmar) {
-      return;
-    }
-
     setError('');
     setMensaje('');
 
@@ -555,6 +564,7 @@ function AdminProductos() {
         datos.mensaje ||
           'Producto eliminado correctamente'
       );
+      setProductoPendienteEliminar(null);
 
     } catch (error) {
       if (error instanceof Error) {
@@ -577,17 +587,6 @@ function AdminProductos() {
     evento: React.ChangeEvent<HTMLInputElement>
   ) => {
     setBusqueda(evento.target.value);
-    setPaginaActual(1);
-  };
-
-  /*
-   * CAMBIAR CATEGORÍA
-   */
-
-  const cambiarCategoriaFiltro = (
-    evento: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setCategoriaFiltro(evento.target.value);
     setPaginaActual(1);
   };
 
@@ -639,35 +638,10 @@ function AdminProductos() {
 
   if (cargando) {
     return (
-      <main>
-
-        <div className="admin-message">
-
-          <p>
-            Cargando productos...
-          </p>
-
+      <main className="admin-container">
+        <div className="admin-table-skeleton" aria-label="Cargando productos" aria-busy="true">
+          {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}
         </div>
-
-      </main>
-    );
-  }
-
-  if (
-    error &&
-    productos.length === 0
-  ) {
-    return (
-      <main>
-
-        <div className="admin-message admin-error">
-
-          <p>
-            {error}
-          </p>
-
-        </div>
-
       </main>
     );
   }
@@ -697,18 +671,6 @@ function AdminProductos() {
 
         </div>
 
-        {mensaje && (
-          <div className="admin-success-message">
-            {mensaje}
-          </div>
-        )}
-
-        {error && (
-          <div className="admin-error-message">
-            {error}
-          </div>
-        )}
-
         <section className="admin-products">
 
           <div className="admin-section-header">
@@ -725,13 +687,13 @@ function AdminProductos() {
 
             </div>
 
-            <button
+            <Button
               type="button"
               className="admin-primary-button"
               onClick={manejarNuevoProducto}
             >
               Nuevo producto
-            </button>
+            </Button>
 
           </div>
 
@@ -739,7 +701,7 @@ function AdminProductos() {
 
           <div className="admin-products-filters">
 
-            <input
+            <Input
               type="text"
               value={busqueda}
               onChange={cambiarBusqueda}
@@ -747,34 +709,35 @@ function AdminProductos() {
               className="admin-search-input"
             />
 
-            <select
-              value={categoriaFiltro}
-              onChange={cambiarCategoriaFiltro}
-              className="admin-category-filter"
+            <Select
+              value={categoriaFiltro || 'todas'}
+              onValueChange={(value) => {
+                setCategoriaFiltro(
+                  !value || value === 'todas' ? '' : value,
+                );
+                setPaginaActual(1);
+              }}
             >
-
-              <option value="">
-                Todas las categorías
-              </option>
-
-              {categorias.map(
-                (categoria) => (
-                  <option
-                    key={categoria.id}
-                    value={categoria.nombre}
-                  >
+              <SelectTrigger className="admin-filter-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las categorías</SelectItem>
+                {categorias.map((categoria) => (
+                  <SelectItem key={categoria.id} value={categoria.nombre}>
                     {categoria.nombre}
-                  </option>
-                )
-              )}
-
-            </select>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
           </div>
 
           {/* FORMULARIO */}
 
-          {mostrarFormulario && (
+      <Dialog open={mostrarFormulario} onOpenChange={(open) => { if (!open && !guardando) cerrarFormulario(); }}>
+        <DialogContent className="admin-edit-dialog">
+          <DialogHeader><DialogTitle className="sr-only">{productoEditando ? 'Editar producto' : 'Crear producto'}</DialogTitle></DialogHeader>
             <div className="admin-form-card">
 
               <div className="admin-form-header">
@@ -793,14 +756,17 @@ function AdminProductos() {
 
                 </div>
 
-                <button
+                <Button
                   type="button"
                   className="admin-close-button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Cerrar formulario"
                   onClick={cerrarFormulario}
                   disabled={guardando}
                 >
                   ×
-                </button>
+                </Button>
 
               </div>
 
@@ -819,11 +785,11 @@ function AdminProductos() {
 
                   <div className="form-group">
 
-                    <label htmlFor="nombre">
+                    <Label htmlFor="nombre">
                       Nombre
-                    </label>
+                    </Label>
 
-                    <input
+                    <Input
                       id="nombre"
                       type="text"
                       value={nombre}
@@ -842,49 +808,27 @@ function AdminProductos() {
 
                   <div className="form-group">
 
-                    <label htmlFor="categoria">
+                    <Label htmlFor="categoria">
                       Categoría
-                    </label>
+                    </Label>
 
-                    <select
-                      id="categoria"
-                      value={categoriaId}
-                      onChange={(evento) =>
-                        setCategoriaId(
-                          evento.target.value
-                        )
-                      }
-                      required
-                    >
-
-                      <option value="">
-                        Selecciona una categoría
-                      </option>
-
-                      {categorias.map(
-                        (categoria) => (
-                          <option
-                            key={categoria.id}
-                            value={categoria.id}
-                          >
-                            {categoria.nombre}
-                          </option>
-                        )
-                      )}
-
-                    </select>
-
+                    <Select value={categoriaId || null} onValueChange={(value) => setCategoriaId(value ?? '')}>
+                      <SelectTrigger id="categoria" className="w-full"><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
+                      <SelectContent>
+                        {categorias.map((categoria) => <SelectItem key={categoria.id} value={String(categoria.id)}>{categoria.nombre}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* PRECIO */}
 
                   <div className="form-group">
 
-                    <label htmlFor="precio">
+                    <Label htmlFor="precio">
                       Precio
-                    </label>
+                    </Label>
 
-                    <input
+                    <Input
                       id="precio"
                       type="number"
                       min="0"
@@ -905,11 +849,11 @@ function AdminProductos() {
 
                   <div className="form-group">
 
-                    <label htmlFor="stock">
+                    <Label htmlFor="stock">
                       Stock
-                    </label>
+                    </Label>
 
-                    <input
+                    <Input
                       id="stock"
                       type="number"
                       min="0"
@@ -930,11 +874,11 @@ function AdminProductos() {
 
                   <div className="form-group admin-form-full">
 
-                    <label htmlFor="imagen">
+                    <Label htmlFor="imagen">
                       URL de la imagen
-                    </label>
+                    </Label>
 
-                    <input
+                    <Input
                       id="imagen"
                       type="url"
                       value={imagen}
@@ -975,11 +919,11 @@ function AdminProductos() {
 
                   <div className="form-group admin-form-full">
 
-                    <label htmlFor="descripcion">
+                    <Label htmlFor="descripcion">
                       Descripción
-                    </label>
+                    </Label>
 
-                    <textarea
+                    <Textarea
                       id="descripcion"
                       value={descripcion}
                       onChange={(evento) =>
@@ -998,16 +942,16 @@ function AdminProductos() {
 
                 <div className="admin-form-actions">
 
-                  <button
+                  <Button
                     type="button"
                     className="admin-secondary-button"
                     onClick={cerrarFormulario}
                     disabled={guardando}
                   >
                     Cancelar
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     type="submit"
                     className="admin-primary-button"
                     disabled={guardando}
@@ -1017,14 +961,15 @@ function AdminProductos() {
                       : productoEditando
                         ? 'Guardar cambios'
                         : 'Crear producto'}
-                  </button>
+                  </Button>
 
                 </div>
 
               </form>
 
             </div>
-          )}
+        </DialogContent>
+      </Dialog>
 
           {/* TABLA */}
 
@@ -1047,7 +992,7 @@ function AdminProductos() {
 
               <div className="admin-products-table">
 
-                <table>
+                <Table>
 
                   <thead>
 
@@ -1127,7 +1072,7 @@ function AdminProductos() {
 
                           <td>
 
-                            <span
+                              <Badge variant="outline"
                               className={
                                 producto.stock === 0
                                   ? 'stock-badge stock-out'
@@ -1141,7 +1086,7 @@ function AdminProductos() {
                                 ? 'Sin stock'
                                 : producto.stock}
 
-                            </span>
+                              </Badge>
 
                           </td>
 
@@ -1149,23 +1094,25 @@ function AdminProductos() {
 
                             <div className="admin-product-actions">
 
-                              <button
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 type="button"
                                 onClick={() =>
                                   manejarEditarProducto(
                                     producto
                                   )
                                 }
-                              >
-                                Editar
-                              </button>
+                                >
+                                  Editar
+                              </Button>
 
-                              <button
+                              <Button
+                                variant="destructive"
+                                size="sm"
                                 type="button"
                                 onClick={() =>
-                                  manejarEliminarProducto(
-                                    producto
-                                  )
+                                  setProductoPendienteEliminar(producto)
                                 }
                                 disabled={
                                   eliminandoId ===
@@ -1176,7 +1123,7 @@ function AdminProductos() {
                                 producto.id
                                   ? 'Eliminando...'
                                   : 'Eliminar'}
-                              </button>
+                              </Button>
 
                             </div>
 
@@ -1189,84 +1136,18 @@ function AdminProductos() {
 
                   </tbody>
 
-                </table>
+                </Table>
 
               </div>
 
               {/* PAGINACIÓN */}
 
-              <div className="admin-pagination">
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.max(
-                          pagina - 1,
-                          1
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada === 1
-                  }
-                >
-                  ← Anterior
-                </button>
-
-                <div className="admin-pagination-pages">
-
-                  {Array.from(
-                    {
-                      length: totalPaginas,
-                    },
-                    (_, indice) =>
-                      indice + 1
-                  ).map((pagina) => (
-
-                    <button
-                      key={pagina}
-                      type="button"
-                      className={
-                        pagina ===
-                        paginaMostrada
-                          ? 'active'
-                          : ''
-                      }
-                      onClick={() =>
-                        setPaginaActual(
-                          pagina
-                        )
-                      }
-                    >
-                      {pagina}
-                    </button>
-
-                  ))}
-
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPaginaActual(
-                      (pagina) =>
-                        Math.min(
-                          pagina + 1,
-                          totalPaginas
-                        )
-                    )
-                  }
-                  disabled={
-                    paginaMostrada ===
-                    totalPaginas
-                  }
-                >
-                  Siguiente →
-                </button>
-
-              </div>
+              <AdminPagination
+                paginaActual={paginaMostrada}
+                totalPaginas={totalPaginas}
+                alCambiarPagina={setPaginaActual}
+                ariaLabel="Paginación de productos de administración"
+              />
 
             </>
 
@@ -1275,6 +1156,19 @@ function AdminProductos() {
         </section>
 
       </div>
+
+      <AlertDialog open={Boolean(productoPendienteEliminar)} onOpenChange={(open) => { if (!open) setProductoPendienteEliminar(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar este producto?</AlertDialogTitle>
+            <AlertDialogDescription>Se eliminará “{productoPendienteEliminar?.nombre}” del catálogo. Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" disabled={eliminandoId !== null} onClick={() => { if (productoPendienteEliminar) void manejarEliminarProducto(productoPendienteEliminar); }}>Eliminar producto</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </main>
   );

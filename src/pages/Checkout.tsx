@@ -10,6 +10,10 @@ import {
 
 import { useCarrito } from '../context/useCarrito';
 import { useAuth } from '../context/useAuth';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
+import { toast } from 'sonner';
 
 function Checkout() {
   const {
@@ -21,9 +25,9 @@ function Checkout() {
 
   const navigate = useNavigate();
 
-  const [error, setError] = useState('');
   const [cargando, setCargando] =
     useState(false);
+  const [pedidoCreado, setPedidoCreado] = useState(false);
 
   const total = carrito.reduce(
     (suma, item) =>
@@ -36,6 +40,34 @@ function Checkout() {
   if (!usuario) {
     navigate('/login');
     return null;
+  }
+
+  if (pedidoCreado) {
+    return (
+      <main className="store-message-page">
+        <Card className="store-success-card">
+          <div className="store-success-icon">✓</div>
+          <p className="eyebrow">PEDIDO CONFIRMADO</p>
+          <h1>¡Gracias por tu compra!</h1>
+          <p>Hemos recibido tu pedido correctamente. Puedes consultar el estado desde tu cuenta.</p>
+          <div className="store-success-actions">
+            <Button
+              size="lg"
+              render={<Link to="/pedidos" />}
+            >
+              Ver mis pedidos
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              render={<Link to="/" />}
+            >
+              Volver a la tienda
+            </Button>
+          </div>
+        </Card>
+      </main>
+    );
   }
 
   if (carrito.length === 0) {
@@ -51,12 +83,7 @@ function Checkout() {
             tramitar el pedido.
           </p>
 
-          <Link
-            to="/"
-            className="empty-cart-button"
-          >
-            Ver productos
-          </Link>
+          <Button render={<Link to="/" />}>Ver productos</Button>
         </div>
       </main>
     );
@@ -66,8 +93,6 @@ function Checkout() {
     evento: FormEvent
   ) => {
     evento.preventDefault();
-
-    setError('');
 
     try {
       setCargando(true);
@@ -92,7 +117,7 @@ function Checkout() {
       const datos = await respuesta.json();
 
       if (!respuesta.ok) {
-        setError(
+        toast.error(
           datos.error ||
             'No se ha podido crear el pedido'
         );
@@ -100,16 +125,10 @@ function Checkout() {
         return;
       }
 
-      console.log(
-        'Pedido creado:',
-        datos
-      );
-
       vaciarCarrito();
-
-      navigate('/');
+      setPedidoCreado(true);
     } catch {
-      setError(
+      toast.error(
         'No se ha podido conectar con el servidor'
       );
     } finally {
@@ -134,7 +153,7 @@ function Checkout() {
         </div>
 
         <div className="checkout-layout">
-          <section className="checkout-section">
+          <Card className="checkout-section">
             <h2>
               Datos del cliente
             </h2>
@@ -205,7 +224,7 @@ function Checkout() {
                 </article>
               ))}
             </div>
-          </section>
+          </Card>
 
           <aside className="checkout-summary">
             <h2>Resumen</h2>
@@ -239,16 +258,11 @@ function Checkout() {
               </strong>
             </div>
 
-            {error && (
-              <p className="auth-error">
-                {error}
-              </p>
-            )}
-
+            <Separator />
             <form
               onSubmit={confirmarPedido}
             >
-              <button
+              <Button
                 type="submit"
                 className="cart-checkout"
                 disabled={cargando}
@@ -256,10 +270,11 @@ function Checkout() {
                 {cargando
                   ? 'Procesando pedido...'
                   : 'Confirmar pedido'}
-              </button>
+              </Button>
             </form>
 
-            <button
+            <Button
+              variant="ghost"
               type="button"
               className="checkout-back"
               onClick={() =>
@@ -268,7 +283,7 @@ function Checkout() {
               disabled={cargando}
             >
               ← Volver al carrito
-            </button>
+            </Button>
           </aside>
         </div>
       </div>
