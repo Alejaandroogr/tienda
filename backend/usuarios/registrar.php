@@ -27,10 +27,14 @@ $datos = json_decode(
     true
 );
 
+$nombreRecibido = campoTextoSolicitud($datos, 'nombre');
+$emailRecibido = campoTextoSolicitud($datos, 'email');
+$password = campoTextoSolicitud($datos, 'password');
+
 if (
-    !isset($datos['nombre']) ||
-    !isset($datos['email']) ||
-    !isset($datos['password'])
+    $nombreRecibido === null ||
+    $emailRecibido === null ||
+    $password === null
 ) {
     http_response_code(400);
 
@@ -41,9 +45,8 @@ if (
     exit;
 }
 
-$nombre = trim($datos['nombre']);
-$email = trim($datos['email']);
-$password = $datos['password'];
+$nombre = trim($nombreRecibido);
+$email = trim($emailRecibido);
 
 if (
     $nombre === '' ||

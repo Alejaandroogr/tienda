@@ -32,8 +32,8 @@ $datos = json_decode(
 );
 
 if (
-    !isset($datos['id']) ||
-    !isset($datos['rol'])
+    campoEnteroSolicitud($datos, 'id') === null ||
+    campoTextoSolicitud($datos, 'rol') === null
 ) {
     http_response_code(400);
 

@@ -31,7 +31,7 @@ $datos = json_decode(
     true
 );
 
-if (!isset($datos['nombre'])) {
+if (campoTextoSolicitud($datos, 'nombre') === null) {
     http_response_code(400);
 
     echo json_encode([
