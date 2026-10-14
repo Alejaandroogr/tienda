@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from 'react';
@@ -18,6 +19,14 @@ import { Textarea } from '../../components/ui/textarea';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
+import { PerfilRecomendacionFields } from '../../components/admin/PerfilRecomendacionFields';
+import type { PerfilRecomendacion } from '../../types/PerfilRecomendacion';
+import {
+  crearPayloadPerfil,
+  obtenerPerfilRecomendacion,
+  PERFIL_VACIO,
+  type EstadoCargaPerfil,
+} from '../../services/perfilRecomendacionService';
 
 interface Categoria {
   id: number;
@@ -65,6 +74,21 @@ function AdminProductos() {
 
   const [categoriaId, setCategoriaId] =
     useState('');
+
+  const [perfilIA, setPerfilIA] = useState<PerfilRecomendacion>(PERFIL_VACIO);
+
+  const [estadoPerfil, setEstadoPerfil] = useState<EstadoCargaPerfil>('listo');
+
+  // Perfil guardado del producto en edición y su categoría, para restaurarlo si
+  // el administrador cambia de categoría y vuelve a la original.
+  const perfilOriginalRef = useRef<{
+    categoriaId: string;
+    perfil: PerfilRecomendacion;
+    estado: EstadoCargaPerfil;
+  } | null>(null);
+
+  // Identifica la última carga de perfil; las respuestas anteriores se descartan.
+  const cargaPerfilRef = useRef(0);
 
   const [guardando, setGuardando] =
     useState(false);
@@ -216,6 +240,10 @@ function AdminProductos() {
     setStock('');
     setImagen('');
     setCategoriaId('');
+    setPerfilIA(PERFIL_VACIO);
+    setEstadoPerfil('listo');
+    perfilOriginalRef.current = null;
+    cargaPerfilRef.current += 1;
     setMensaje('');
     setError('');
     setProductoEditando(null);
@@ -234,7 +262,7 @@ function AdminProductos() {
    * EDITAR PRODUCTO
    */
 
-  const manejarEditarProducto = (
+  const manejarEditarProducto = async (
     producto: Producto
   ) => {
     setProductoEditando(producto);
@@ -251,16 +279,68 @@ function AdminProductos() {
           item.nombre === producto.categoria
       );
 
-    setCategoriaId(
-      categoria
-        ? String(categoria.id)
-        : ''
-    );
+    const categoriaProductoId = categoria
+      ? String(categoria.id)
+      : '';
+
+    setCategoriaId(categoriaProductoId);
 
     setMensaje('');
     setError('');
     setMostrarFormulario(true);
+
+    await cargarPerfilProducto(producto.id, categoriaProductoId);
   };
+
+  const cargarPerfilProducto = async (productoId: number, categoriaProductoId: string) => {
+    const carga = ++cargaPerfilRef.current;
+    perfilOriginalRef.current = { categoriaId: categoriaProductoId, perfil: PERFIL_VACIO, estado: 'cargando' };
+    setPerfilIA(PERFIL_VACIO);
+    setEstadoPerfil('cargando');
+
+    let original: { perfil: PerfilRecomendacion; estado: EstadoCargaPerfil };
+    try {
+      const respuestaPerfil = await obtenerPerfilRecomendacion(productoId);
+      original = {
+        perfil: respuestaPerfil.existe_perfil ? respuestaPerfil.perfil_ia : PERFIL_VACIO,
+        estado: 'listo',
+      };
+    } catch (errorPerfil) {
+      // Sin perfil cargado no se envía perfil_ia, así que el guardado no lo modifica.
+      original = { perfil: PERFIL_VACIO, estado: 'error' };
+      if (carga === cargaPerfilRef.current) {
+        setError(errorPerfil instanceof Error ? errorPerfil.message : 'No se pudo cargar el perfil IA');
+      }
+    }
+
+    if (carga !== cargaPerfilRef.current) return;
+
+    perfilOriginalRef.current = { categoriaId: categoriaProductoId, ...original };
+    setPerfilIA(original.perfil);
+    setEstadoPerfil(original.estado);
+  };
+
+  const obtenerMensajeError = (datos: { error?: string | { message?: string } }, alternativa: string) =>
+    typeof datos.error === 'string' ? datos.error : datos.error?.message || alternativa;
+
+  const cambiarCategoriaFormulario = (siguienteId: string) => {
+    if (siguienteId === categoriaId) return;
+
+    const original = perfilOriginalRef.current;
+    if (original && siguienteId === original.categoriaId) {
+      // De vuelta a la categoría guardada: se recupera su perfil en vez de vaciarlo.
+      setPerfilIA(original.perfil);
+      setEstadoPerfil(original.estado);
+    } else {
+      setPerfilIA(PERFIL_VACIO);
+      setEstadoPerfil('listo');
+    }
+
+    setCategoriaId(siguienteId);
+  };
+
+  const nombreCategoriaFormulario =
+    categorias.find((categoria) => String(categoria.id) === categoriaId)?.nombre ?? '';
 
   /*
    * CERRAR FORMULARIO
@@ -348,6 +428,7 @@ function AdminProductos() {
     try {
       setGuardando(true);
 
+      const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
           'http://localhost/tienda/backend/productos/crear.php',
@@ -364,6 +445,7 @@ function AdminProductos() {
               stock: stockNumerico,
               imagen: imagen.trim(),
               categoria_id: Number(categoriaId),
+              perfil_ia: perfilPayload,
             }),
           }
         );
@@ -373,8 +455,7 @@ function AdminProductos() {
 
       if (!respuesta.ok) {
         setError(
-          datos.error ||
-            'No se ha podido crear el producto'
+          obtenerMensajeError(datos, 'No se ha podido crear el producto')
         );
 
         return;
@@ -462,6 +543,7 @@ function AdminProductos() {
     try {
       setGuardando(true);
 
+      const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
           'http://localhost/tienda/backend/productos/editar.php',
@@ -479,6 +561,7 @@ function AdminProductos() {
               stock: stockNumerico,
               imagen: imagen.trim(),
               categoria_id: Number(categoriaId),
+              perfil_ia: perfilPayload,
             }),
           }
         );
@@ -488,8 +571,7 @@ function AdminProductos() {
 
       if (!respuesta.ok) {
         setError(
-          datos.error ||
-            'No se ha podido editar el producto'
+          obtenerMensajeError(datos, 'No se ha podido editar el producto')
         );
 
         return;
@@ -777,7 +859,12 @@ function AdminProductos() {
                     ? guardarCambiosProducto
                     : manejarCrearProducto
                 }
-              >
+                >
+
+                <div className="admin-form-section-heading">
+                  <h3>Datos del producto</h3>
+                  <p>Información comercial y de catálogo.</p>
+                </div>
 
                 <div className="admin-form-grid">
 
@@ -812,7 +899,11 @@ function AdminProductos() {
                       Categoría
                     </Label>
 
-                    <Select value={categoriaId || null} onValueChange={(value) => setCategoriaId(value ?? '')}>
+                    <Select
+                      value={categoriaId || null}
+                      onValueChange={(value) => cambiarCategoriaFormulario(value ?? '')}
+                      disabled={estadoPerfil === 'cargando'}
+                    >
                       <SelectTrigger id="categoria" className="w-full"><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
                       <SelectContent>
                         {categorias.map((categoria) => <SelectItem key={categoria.id} value={String(categoria.id)}>{categoria.nombre}</SelectItem>)}
@@ -940,13 +1031,40 @@ function AdminProductos() {
 
                 </div>
 
+                {estadoPerfil === 'listo' && (
+                  <PerfilRecomendacionFields
+                    categoria={nombreCategoriaFormulario}
+                    perfil={perfilIA}
+                    onChange={setPerfilIA}
+                  />
+                )}
+
+                {estadoPerfil === 'cargando' && <p role="status">Cargando perfil IA existente…</p>}
+
+                {estadoPerfil === 'error' && productoEditando && (
+                  <div className="admin-ai-profile" role="alert">
+                    <p>
+                      No se pudo cargar el perfil IA de este producto. Si guardas
+                      ahora, el perfil guardado no se modificará.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => cargarPerfilProducto(productoEditando.id, perfilOriginalRef.current?.categoriaId ?? categoriaId)}
+                      disabled={guardando}
+                    >
+                      Reintentar carga del perfil
+                    </Button>
+                  </div>
+                )}
+
                 <div className="admin-form-actions">
 
                   <Button
                     type="button"
                     className="admin-secondary-button"
                     onClick={cerrarFormulario}
-                    disabled={guardando}
+                    disabled={guardando || estadoPerfil === 'cargando'}
                   >
                     Cancelar
                   </Button>
@@ -954,7 +1072,7 @@ function AdminProductos() {
                   <Button
                     type="submit"
                     className="admin-primary-button"
-                    disabled={guardando}
+                    disabled={guardando || estadoPerfil === 'cargando'}
                   >
                     {guardando
                       ? 'Guardando...'

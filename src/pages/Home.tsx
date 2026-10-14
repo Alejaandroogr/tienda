@@ -15,6 +15,7 @@ import { obtenerProductos } from '../services/productosService';
 import ProductCard from '../components/ProductCard';
 import CatalogPagination from '../components/CatalogPagination';
 import Hero from '../components/Hero';
+import RecommendationAssistant from '../components/RecommendationAssistant';
 import SearchBar from '../components/SearchBar';
 import { Slider } from '../components/ui/slider';
 import { Button } from '../components/ui/button';
@@ -353,6 +354,7 @@ function Home() {
           </div>
         )}
       </main>
+      <RecommendationAssistant />
     </div>
   );
 }
