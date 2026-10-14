@@ -5,6 +5,7 @@ import {
 
 import {
   Link,
+  Navigate,
   useNavigate,
 } from 'react-router-dom';
 
@@ -37,9 +38,9 @@ function Checkout() {
     0
   );
 
+  // navigate() durante el render no hace nada y dejaba la página en blanco.
   if (!usuario) {
-    navigate('/login');
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   if (pedidoCreado) {
