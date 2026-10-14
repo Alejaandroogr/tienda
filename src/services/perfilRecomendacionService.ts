@@ -1,7 +1,9 @@
 import type {
   AtributosPerfil,
   CampoAtributoPerfil,
+  CampoUsoPerfil,
   CategoriaPerfil,
+  EstadoUso,
   PerfilRecomendacion,
   RespuestaPerfilRecomendacion,
 } from '../types/PerfilRecomendacion';
@@ -9,7 +11,13 @@ import type {
 const BASE_URL = 'http://localhost/tienda/backend/productos';
 
 const opciones = (valores: readonly string[]) => valores.map((valor) => ({ valor, etiqueta: valor }));
+const nivelesRendimiento = [
+  { valor: 'entrada', etiqueta: 'Entrada' },
+  { valor: 'media', etiqueta: 'Media' },
+  { valor: 'alta', etiqueta: 'Alta' },
+];
 
+// Debe coincidir con esquemaPerfilPorCategoria() de backend/productos/perfil_recomendacion.php.
 const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]> = {
   portatiles: [
     { clave: 'cpu_modelo', etiqueta: 'Modelo de CPU', tipo: 'texto' },
@@ -23,10 +31,12 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
   ],
   'tarjetas graficas': [
     { clave: 'vram_gb', etiqueta: 'VRAM', tipo: 'numero', unidad: 'GB', maximo: 512 },
+    { clave: 'rendimiento_gaming', etiqueta: 'Rendimiento gaming', tipo: 'enum', opciones: nivelesRendimiento },
   ],
   procesadores: [
-    { clave: 'nucleos', etiqueta: 'Núcleos', tipo: 'numero', maximo: 1024 },
-    { clave: 'hilos', etiqueta: 'Hilos', tipo: 'numero', maximo: 4096 },
+    { clave: 'nucleos', etiqueta: 'Núcleos', tipo: 'numero', maximo: 1024, entero: true },
+    { clave: 'hilos', etiqueta: 'Hilos', tipo: 'numero', maximo: 4096, entero: true },
+    { clave: 'rendimiento', etiqueta: 'Rendimiento', tipo: 'enum', opciones: nivelesRendimiento },
   ],
   moviles: [
     { clave: 'ram_gb', etiqueta: 'RAM', tipo: 'numero', unidad: 'GB', maximo: 1024 },
@@ -63,15 +73,49 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
   ],
 };
 
-export const PERFIL_VACIO: PerfilRecomendacion = { atributos: {} };
+const ETIQUETAS_USO: Record<string, string> = {
+  gaming: 'Gaming',
+  programacion: 'Programación',
+  trabajo: 'Trabajo',
+  edicion: 'Edición',
+  creacion_3d: 'Creación 3D',
+  ia: 'IA',
+  fotografia: 'Fotografía',
+  viajes: 'Viajes',
+  gimnasio: 'Gimnasio',
+  musica: 'Música',
+  deporte: 'Deporte',
+  salud: 'Salud',
+  cine_streaming: 'Cine y streaming',
+  deportes: 'Deportes',
+};
+
+// Debe coincidir con los usos de esquemaPerfilPorCategoria() en el backend.
+const usosPorCategoria: Record<CategoriaPerfil, readonly string[]> = {
+  portatiles: ['gaming', 'programacion', 'trabajo', 'edicion'],
+  'tarjetas graficas': ['gaming', 'edicion', 'creacion_3d', 'ia'],
+  procesadores: ['gaming', 'programacion', 'trabajo', 'edicion'],
+  moviles: ['fotografia', 'gaming', 'trabajo', 'viajes'],
+  auriculares: ['gimnasio', 'gaming', 'trabajo', 'musica'],
+  smartwatch: ['gimnasio', 'deporte', 'salud', 'trabajo'],
+  televisores: ['gaming', 'cine_streaming', 'deportes'],
+};
+
+export const ESTADOS_USO: readonly { valor: EstadoUso; etiqueta: string }[] = [
+  { valor: 'adecuado', etiqueta: 'Adecuado' },
+  { valor: 'no_recomendado', etiqueta: 'No adecuado' },
+];
+
+export const PERFIL_VACIO: PerfilRecomendacion = { usos: {}, atributos: {} };
 
 export function normalizarCategoriaPerfil(nombre: string): CategoriaPerfil | null {
-  const normalizada = nombre.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  const categorias: readonly CategoriaPerfil[] = [
-    'portatiles', 'tarjetas graficas', 'procesadores', 'moviles',
-    'auriculares', 'smartwatch', 'televisores',
-  ];
+  const normalizada = nombre.toLocaleLowerCase('es').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const categorias = Object.keys(camposPorCategoria) as CategoriaPerfil[];
   return categorias.find((categoria) => categoria === normalizada) ?? null;
+}
+
+export function categoriaAdmitePerfil(categoria: string): boolean {
+  return normalizarCategoriaPerfil(categoria) !== null;
 }
 
 export function obtenerCamposAtributoCategoria(categoria: string): readonly CampoAtributoPerfil[] {
@@ -79,41 +123,128 @@ export function obtenerCamposAtributoCategoria(categoria: string): readonly Camp
   return clave ? camposPorCategoria[clave] : [];
 }
 
-export function filtrarAtributosPerfil(atributos: unknown, categoria: string): AtributosPerfil {
-  if (typeof atributos !== 'object' || atributos === null || Array.isArray(atributos)) return {};
+export function obtenerCamposUsoCategoria(categoria: string): readonly CampoUsoPerfil[] {
+  const clave = normalizarCategoriaPerfil(categoria);
+  return clave
+    ? usosPorCategoria[clave].map((uso) => ({ clave: uso, etiqueta: ETIQUETAS_USO[uso] ?? uso }))
+    : [];
+}
 
-  const valores = atributos as Record<string, unknown>;
+function esObjetoPlano(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === 'object' && valor !== null && !Array.isArray(valor);
+}
+
+/** Devuelve el valor normalizado si es válido para el campo, o undefined si no lo es. */
+function valorAtributoValido(campo: CampoAtributoPerfil, valor: unknown): unknown {
+  if (valor === null || valor === undefined || valor === '') return undefined;
+
+  if (campo.tipo === 'texto') {
+    // Sin recortar: permite escribir espacios entre palabras; el backend recorta al guardar.
+    return typeof valor === 'string' && valor.trim() !== '' && valor.length <= 120 ? valor : undefined;
+  }
+  if (campo.tipo === 'numero') {
+    return typeof valor === 'number' &&
+      Number.isFinite(valor) &&
+      valor > 0 &&
+      (campo.maximo === undefined || valor <= campo.maximo) &&
+      (!campo.entero || Number.isInteger(valor))
+      ? valor
+      : undefined;
+  }
+  if (campo.tipo === 'booleano') {
+    return typeof valor === 'boolean' ? valor : undefined;
+  }
+  if (campo.tipo === 'enum') {
+    return typeof valor === 'string' && campo.opciones.some((opcion) => opcion.valor === valor) ? valor : undefined;
+  }
+  return Array.isArray(valor) &&
+    valor.length > 0 &&
+    valor.every((elemento) => typeof elemento === 'string' && campo.opciones.some((opcion) => opcion.valor === elemento))
+    ? [...new Set(valor)]
+    : undefined;
+}
+
+/** Atributos conocidos y válidos de la categoría, para mostrarlos en el formulario. */
+export function filtrarAtributosPerfil(atributos: unknown, categoria: string): AtributosPerfil {
+  if (!esObjetoPlano(atributos)) return {};
+
   const resultado: Record<string, unknown> = {};
 
   for (const campo of obtenerCamposAtributoCategoria(categoria)) {
-    const valor = valores[campo.clave];
-    if (valor === null || valor === undefined || valor === '') continue;
-
-    if (campo.tipo === 'texto' && typeof valor === 'string' && valor.trim() !== '' && valor.length <= 120) {
-      resultado[campo.clave] = valor.trim();
-    } else if (
-      campo.tipo === 'numero' &&
-      typeof valor === 'number' &&
-      Number.isFinite(valor) &&
-      valor > 0 &&
-      (campo.maximo === undefined || valor <= campo.maximo)
-    ) {
-      resultado[campo.clave] = valor;
-    } else if (campo.tipo === 'booleano' && typeof valor === 'boolean') {
-      resultado[campo.clave] = valor;
-    } else if (campo.tipo === 'enum' && typeof valor === 'string' && campo.opciones.some((opcion) => opcion.valor === valor)) {
-      resultado[campo.clave] = valor;
-    } else if (
-      campo.tipo === 'lista' &&
-      Array.isArray(valor) &&
-      valor.length > 0 &&
-      valor.every((elemento) => typeof elemento === 'string' && campo.opciones.some((opcion) => opcion.valor === elemento))
-    ) {
-      resultado[campo.clave] = [...new Set(valor)];
-    }
+    const valor = valorAtributoValido(campo, atributos[campo.clave]);
+    if (valor !== undefined) resultado[campo.clave] = valor;
   }
 
   return resultado as AtributosPerfil;
+}
+
+/** Usos conocidos de la categoría con un estado válido, para mostrarlos en el formulario. */
+export function filtrarUsosPerfil(usos: unknown, categoria: string): Record<string, EstadoUso> {
+  if (!esObjetoPlano(usos)) return {};
+
+  const resultado: Record<string, EstadoUso> = {};
+
+  for (const { clave } of obtenerCamposUsoCategoria(categoria)) {
+    const estado = usos[clave];
+    if (ESTADOS_USO.some((opcion) => opcion.valor === estado)) resultado[clave] = estado as EstadoUso;
+  }
+
+  return resultado;
+}
+
+/**
+ * Cambia un único atributo y conserva el resto del perfil tal como se cargó.
+ * Un valor vacío o no válido elimina la clave (dato desconocido).
+ */
+export function aplicarCambioAtributo(
+  perfil: PerfilRecomendacion,
+  campo: CampoAtributoPerfil,
+  valor: unknown,
+): PerfilRecomendacion {
+  const atributos = { ...perfil.atributos };
+  const valido = valorAtributoValido(campo, valor);
+
+  if (valido === undefined) {
+    delete atributos[campo.clave];
+  } else {
+    atributos[campo.clave] = valido;
+  }
+
+  return { ...perfil, atributos };
+}
+
+/** Cambia un único uso; undefined lo deja como desconocido. */
+export function aplicarCambioUso(
+  perfil: PerfilRecomendacion,
+  clave: string,
+  estado: EstadoUso | undefined,
+): PerfilRecomendacion {
+  const usos = { ...perfil.usos };
+
+  if (estado === undefined) {
+    delete usos[clave];
+  } else {
+    usos[clave] = estado;
+  }
+
+  return { ...perfil, usos };
+}
+
+export type EstadoCargaPerfil = 'listo' | 'cargando' | 'error';
+
+/**
+ * Perfil que debe enviarse al guardar el producto, o undefined si no debe
+ * enviarse: categoría sin esquema IA, o perfil existente sin cargar. Sin
+ * perfil_ia el backend no modifica el perfil guardado.
+ */
+export function crearPayloadPerfil(
+  perfil: PerfilRecomendacion,
+  categoria: string,
+  estadoCarga: EstadoCargaPerfil,
+): PerfilRecomendacion | undefined {
+  if (estadoCarga !== 'listo' || !categoriaAdmitePerfil(categoria)) return undefined;
+
+  return { usos: { ...perfil.usos }, atributos: { ...perfil.atributos } };
 }
 
 interface ErrorApi {
@@ -139,14 +270,12 @@ export async function obtenerPerfilRecomendacion(productoId: number): Promise<Re
     'No se pudo cargar el perfil de recomendaciones',
   );
 
-  return {
-    ...datos,
-    perfil_ia: {
-      atributos: filtrarAtributosPerfil(datos.perfil_ia?.atributos, datos.categoria),
-    },
-  };
-}
+  const usos = datos.perfil_ia?.usos;
+  const atributos = datos.perfil_ia?.atributos;
+  if (!esObjetoPlano(usos) || !esObjetoPlano(atributos)) {
+    throw new Error('El perfil de recomendaciones recibido no tiene un formato válido');
+  }
 
-export function crearPayloadPerfil(perfil: PerfilRecomendacion, categoria: string): PerfilRecomendacion {
-  return { atributos: filtrarAtributosPerfil(perfil.atributos, categoria) };
+  // Se conserva el perfil completo: el formulario solo modifica las claves que se editan.
+  return { ...datos, perfil_ia: { usos: { ...usos }, atributos: { ...atributos } } };
 }

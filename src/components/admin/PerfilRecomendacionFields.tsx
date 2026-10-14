@@ -1,8 +1,13 @@
 import type { ChangeEvent } from 'react';
-import type { CampoAtributoPerfil, PerfilRecomendacion } from '../../types/PerfilRecomendacion';
+import type { CampoAtributoPerfil, EstadoUso, PerfilRecomendacion } from '../../types/PerfilRecomendacion';
 import {
+  aplicarCambioAtributo,
+  aplicarCambioUso,
+  ESTADOS_USO,
   filtrarAtributosPerfil,
+  filtrarUsosPerfil,
   obtenerCamposAtributoCategoria,
+  obtenerCamposUsoCategoria,
 } from '../../services/perfilRecomendacionService';
 
 interface Props {
@@ -13,7 +18,9 @@ interface Props {
 
 export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props) {
   const campos = obtenerCamposAtributoCategoria(categoria);
+  const camposUso = obtenerCamposUsoCategoria(categoria);
   const atributos = filtrarAtributosPerfil(perfil.atributos, categoria) as Record<string, unknown>;
+  const usos = filtrarUsosPerfil(perfil.usos, categoria);
 
   const cambiarAtributo = (
     campo: CampoAtributoPerfil,
@@ -27,20 +34,17 @@ export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props
     } else if (campo.tipo === 'booleano') {
       convertido = valor === '' ? undefined : valor === 'true';
     } else if (campo.tipo === 'lista') {
-      const seleccionados = evento.target instanceof HTMLSelectElement
+      convertido = evento.target instanceof HTMLSelectElement
         ? Array.from(evento.target.selectedOptions, (opcion) => opcion.value)
         : [];
-      convertido = seleccionados.length > 0 ? seleccionados : undefined;
     }
 
-    const siguientes = { ...atributos } as Record<string, unknown>;
-    if (convertido === undefined || convertido === '') {
-      delete siguientes[campo.clave];
-    } else {
-      siguientes[campo.clave] = convertido;
-    }
+    onChange(aplicarCambioAtributo(perfil, campo, convertido));
+  };
 
-    onChange({ atributos: filtrarAtributosPerfil(siguientes, categoria) });
+  const cambiarUso = (clave: string, valor: string) => {
+    const estado = ESTADOS_USO.find((opcion) => opcion.valor === valor)?.valor;
+    onChange(aplicarCambioUso(perfil, clave, estado as EstadoUso | undefined));
   };
 
   return (
@@ -55,73 +59,91 @@ export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props
         </p>
       </header>
       {campos.length === 0 ? (
-        <p>Selecciona una categoría compatible para configurar las especificaciones.</p>
+        <p>Esta categoría no tiene especificaciones para recomendaciones IA.</p>
       ) : (
-        <div className="admin-ai-profile-group">
-          <h4>Especificaciones conocidas</h4>
-          <div className="admin-ai-attributes-grid">
-            {campos.map((campo) => {
-              const actual = atributos[campo.clave];
-              const valorSelect = campo.tipo === 'booleano'
-                ? typeof actual === 'boolean' ? String(actual) : ''
-                : typeof actual === 'string' ? actual : '';
-
-              return (
-                <label className="admin-ai-field" key={campo.clave}>
-                  <span>
-                    {campo.etiqueta}
-                    {campo.tipo === 'numero' && campo.unidad ? ` (${campo.unidad})` : ''}
-                  </span>
-                  {campo.tipo === 'texto' && (
-                    <input
-                      type="text"
-                      maxLength={120}
-                      placeholder={campo.placeholder ?? 'Desconocido'}
-                      value={typeof actual === 'string' ? actual : ''}
-                      onChange={(evento) => cambiarAtributo(campo, evento)}
-                    />
-                  )}
-                  {campo.tipo === 'numero' && (
-                    <input
-                      type="number"
-                      min={campo.paso ? '0.0001' : 1}
-                      max={campo.maximo}
-                      step={campo.paso ? 'any' : 1}
-                      placeholder="Desconocido"
-                      value={typeof actual === 'number' ? actual : ''}
-                      onChange={(evento) => cambiarAtributo(campo, evento)}
-                    />
-                  )}
-                  {(campo.tipo === 'enum' || campo.tipo === 'booleano') && (
-                    <select value={valorSelect} onChange={(evento) => cambiarAtributo(campo, evento)}>
-                      <option value="">Desconocido</option>
-                      {campo.tipo === 'booleano'
-                        ? <>
-                            <option value="true">Sí</option>
-                            <option value="false">No</option>
-                          </>
-                        : campo.opciones.map((opcion) => (
-                            <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
-                          ))}
-                    </select>
-                  )}
-                  {campo.tipo === 'lista' && (
-                    <select
-                      multiple
-                      value={Array.isArray(actual) ? actual.filter((item): item is string => typeof item === 'string') : []}
-                      onChange={(evento) => cambiarAtributo(campo, evento)}
-                      aria-label={`${campo.etiqueta}; usa Ctrl o Command para varias opciones`}
-                    >
-                      {campo.opciones.map((opcion) => (
-                        <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
-                      ))}
-                    </select>
-                  )}
+        <>
+          <div className="admin-ai-profile-group">
+            <h4>Usos valorados por el administrador</h4>
+            <div className="admin-ai-uses-grid">
+              {camposUso.map((uso) => (
+                <label className="admin-ai-field" key={uso.clave}>
+                  <span>{uso.etiqueta}</span>
+                  <select value={usos[uso.clave] ?? ''} onChange={(evento) => cambiarUso(uso.clave, evento.target.value)}>
+                    <option value="">Sin valorar</option>
+                    {ESTADOS_USO.map((opcion) => (
+                      <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
+                    ))}
+                  </select>
                 </label>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+          <div className="admin-ai-profile-group">
+            <h4>Especificaciones conocidas</h4>
+            <div className="admin-ai-attributes-grid">
+              {campos.map((campo) => {
+                const actual = atributos[campo.clave];
+                const valorSelect = campo.tipo === 'booleano'
+                  ? typeof actual === 'boolean' ? String(actual) : ''
+                  : typeof actual === 'string' ? actual : '';
+
+                return (
+                  <label className="admin-ai-field" key={campo.clave}>
+                    <span>
+                      {campo.etiqueta}
+                      {campo.tipo === 'numero' && campo.unidad ? ` (${campo.unidad})` : ''}
+                    </span>
+                    {campo.tipo === 'texto' && (
+                      <input
+                        type="text"
+                        maxLength={120}
+                        placeholder={campo.placeholder ?? 'Desconocido'}
+                        value={typeof actual === 'string' ? actual : ''}
+                        onChange={(evento) => cambiarAtributo(campo, evento)}
+                      />
+                    )}
+                    {campo.tipo === 'numero' && (
+                      <input
+                        type="number"
+                        min={campo.paso ? '0.0001' : 1}
+                        max={campo.maximo}
+                        step={campo.paso ? 'any' : 1}
+                        placeholder="Desconocido"
+                        value={typeof actual === 'number' ? actual : ''}
+                        onChange={(evento) => cambiarAtributo(campo, evento)}
+                      />
+                    )}
+                    {(campo.tipo === 'enum' || campo.tipo === 'booleano') && (
+                      <select value={valorSelect} onChange={(evento) => cambiarAtributo(campo, evento)}>
+                        <option value="">Desconocido</option>
+                        {campo.tipo === 'booleano'
+                          ? <>
+                              <option value="true">Sí</option>
+                              <option value="false">No</option>
+                            </>
+                          : campo.opciones.map((opcion) => (
+                              <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
+                            ))}
+                      </select>
+                    )}
+                    {campo.tipo === 'lista' && (
+                      <select
+                        multiple
+                        value={Array.isArray(actual) ? actual.filter((item): item is string => typeof item === 'string') : []}
+                        onChange={(evento) => cambiarAtributo(campo, evento)}
+                        aria-label={`${campo.etiqueta}; usa Ctrl o Command para varias opciones`}
+                      >
+                        {campo.opciones.map((opcion) => (
+                          <option key={opcion.valor} value={opcion.valor}>{opcion.etiqueta}</option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </>
       )}
     </section>
   );

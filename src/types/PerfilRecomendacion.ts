@@ -1,3 +1,5 @@
+export type NivelRendimiento = 'entrada' | 'media' | 'alta';
+
 export type CategoriaPerfil =
   | 'portatiles'
   | 'tarjetas graficas'
@@ -20,11 +22,13 @@ export interface AtributosPortatil {
 
 export interface AtributosTarjetaGrafica {
   vram_gb?: number;
+  rendimiento_gaming?: NivelRendimiento;
 }
 
 export interface AtributosProcesador {
   nucleos?: number;
   hilos?: number;
+  rendimiento?: NivelRendimiento;
 }
 
 export interface AtributosMovil {
@@ -69,8 +73,15 @@ export type AtributosPerfil =
   | AtributosSmartwatch
   | AtributosTelevisor;
 
+export type EstadoUso = 'adecuado' | 'no_recomendado';
+
+/**
+ * Perfil tal como se edita y se envía: conserva las claves almacenadas que el
+ * formulario no muestra para que guardar no las borre.
+ */
 export interface PerfilRecomendacion {
-  atributos: AtributosPerfil;
+  usos: Record<string, unknown>;
+  atributos: Record<string, unknown>;
 }
 
 export interface RespuestaPerfilRecomendacion {
@@ -81,8 +92,13 @@ export interface RespuestaPerfilRecomendacion {
   existe_perfil: boolean;
 }
 
+export interface CampoUsoPerfil {
+  clave: string;
+  etiqueta: string;
+}
+
 export type CampoAtributoPerfil =
-  | { clave: string; etiqueta: string; tipo: 'numero'; paso?: number; maximo?: number; unidad?: string }
+  | { clave: string; etiqueta: string; tipo: 'numero'; paso?: number; maximo?: number; unidad?: string; entero?: boolean }
   | { clave: string; etiqueta: string; tipo: 'texto'; placeholder?: string }
   | { clave: string; etiqueta: string; tipo: 'enum'; opciones: readonly { valor: string; etiqueta: string }[] }
   | { clave: string; etiqueta: string; tipo: 'booleano' }

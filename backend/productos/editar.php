@@ -143,7 +143,7 @@ try {
 
     // Comprobar que la categoría existe
     $sqlCategoria = "
-        SELECT id
+        SELECT id, nombre
         FROM categorias
         WHERE id = :categoria_id
         LIMIT 1
@@ -192,46 +192,59 @@ try {
 
     $perfilSolicitado = $datos['perfil_ia'] ?? null;
     $categoriaCambio = (int) $producto['categoria_id'] !== $categoriaId;
+    $accionPerfil = planificarPerfilProductoRecomendacion(
+        array_key_exists('perfil_ia', $datos),
+        $perfilSolicitado,
+        categoriaAdmitePerfilRecomendacion((string) $categoria['nombre']),
+        $categoriaCambio
+    );
 
     if (
-        array_key_exists('perfil_ia', $datos) &&
+        $accionPerfil === 'guardar' &&
         $perfilSolicitado instanceof stdClass &&
-        !property_exists($perfilSolicitado, 'usos')
+        (!property_exists($perfilSolicitado, 'usos') || !property_exists($perfilSolicitado, 'atributos'))
     ) {
-        $usosExistentesJson = null;
+        $perfilExistente = false;
 
         if (!$categoriaCambio) {
-            $consultaUsosExistentes = $pdo->prepare(
-                'SELECT usos
+            $consultaPerfilExistente = $pdo->prepare(
+                'SELECT usos, atributos
                  FROM perfil_recomendacion_producto
                  WHERE producto_id = :id AND categoria_id = :categoria_id
                  FOR UPDATE'
             );
-            $consultaUsosExistentes->execute([
+            $consultaPerfilExistente->execute([
                 ':id' => $id,
                 ':categoria_id' => (int) $producto['categoria_id'],
             ]);
-            $usosExistentes = $consultaUsosExistentes->fetchColumn();
-
-            if (is_string($usosExistentes)) {
-                $usosExistentesJson = $usosExistentes;
-            }
+            $perfilExistente = $consultaPerfilExistente->fetch(PDO::FETCH_ASSOC);
         }
 
         $perfilSolicitado = completarUsosOmitidosEdicionPerfilRecomendacion(
             $perfilSolicitado,
-            $usosExistentesJson,
+            is_array($perfilExistente) && is_string($perfilExistente['usos']) ? $perfilExistente['usos'] : null,
+            $categoriaCambio
+        );
+        $perfilSolicitado = completarAtributosOmitidosEdicionPerfilRecomendacion(
+            $perfilSolicitado,
+            is_array($perfilExistente) && is_string($perfilExistente['atributos']) ? $perfilExistente['atributos'] : null,
             $categoriaCambio
         );
     }
 
-    if (array_key_exists('perfil_ia', $datos)) {
+    if ($accionPerfil === 'guardar') {
         guardarPerfilRecomendacion(
             $pdo,
             $id,
             $perfilSolicitado ?? (object) ['usos' => new stdClass(), 'atributos' => new stdClass()]
         );
-    } elseif ($categoriaCambio) {
+    } elseif ($accionPerfil === 'eliminar') {
+        // La nueva categoría no admite perfil IA: el perfil de la anterior deja de ser válido.
+        $eliminarPerfil = $pdo->prepare(
+            'DELETE FROM perfil_recomendacion_producto WHERE producto_id = :id'
+        );
+        $eliminarPerfil->execute([':id' => $id]);
+    } elseif ($accionPerfil === 'restablecer') {
         $consultaPerfil = $pdo->prepare(
             'SELECT categoria_id FROM perfil_recomendacion_producto WHERE producto_id = :id'
         );

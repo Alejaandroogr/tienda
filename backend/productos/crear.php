@@ -114,7 +114,7 @@ try {
 
     // La categoría del producto se valida en MariaDB; perfil_ia no suministra su categoría.
     $sqlCategoria = "
-        SELECT id
+        SELECT id, nombre
         FROM categorias
         WHERE id = :categoria_id
         LIMIT 1
@@ -168,7 +168,14 @@ try {
 
     $productoId = (int) $pdo->lastInsertId();
 
-    if (array_key_exists('perfil_ia', $datos) && $datos['perfil_ia'] !== null) {
+    $accionPerfil = planificarPerfilProductoRecomendacion(
+        array_key_exists('perfil_ia', $datos) && $datos['perfil_ia'] !== null,
+        $datos['perfil_ia'] ?? null,
+        categoriaAdmitePerfilRecomendacion((string) $categoria['nombre']),
+        false
+    );
+
+    if ($accionPerfil === 'guardar') {
         guardarPerfilRecomendacion($pdo, $productoId, $datos['perfil_ia']);
     }
 

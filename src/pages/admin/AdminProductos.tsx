@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from 'react';
@@ -20,7 +21,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import { PerfilRecomendacionFields } from '../../components/admin/PerfilRecomendacionFields';
 import type { PerfilRecomendacion } from '../../types/PerfilRecomendacion';
-import { crearPayloadPerfil, obtenerPerfilRecomendacion, PERFIL_VACIO } from '../../services/perfilRecomendacionService';
+import {
+  crearPayloadPerfil,
+  obtenerPerfilRecomendacion,
+  PERFIL_VACIO,
+  type EstadoCargaPerfil,
+} from '../../services/perfilRecomendacionService';
 
 interface Categoria {
   id: number;
@@ -71,7 +77,18 @@ function AdminProductos() {
 
   const [perfilIA, setPerfilIA] = useState<PerfilRecomendacion>(PERFIL_VACIO);
 
-  const [cargandoPerfil, setCargandoPerfil] = useState(false);
+  const [estadoPerfil, setEstadoPerfil] = useState<EstadoCargaPerfil>('listo');
+
+  // Perfil guardado del producto en edición y su categoría, para restaurarlo si
+  // el administrador cambia de categoría y vuelve a la original.
+  const perfilOriginalRef = useRef<{
+    categoriaId: string;
+    perfil: PerfilRecomendacion;
+    estado: EstadoCargaPerfil;
+  } | null>(null);
+
+  // Identifica la última carga de perfil; las respuestas anteriores se descartan.
+  const cargaPerfilRef = useRef(0);
 
   const [guardando, setGuardando] =
     useState(false);
@@ -224,7 +241,9 @@ function AdminProductos() {
     setImagen('');
     setCategoriaId('');
     setPerfilIA(PERFIL_VACIO);
-    setCargandoPerfil(false);
+    setEstadoPerfil('listo');
+    perfilOriginalRef.current = null;
+    cargaPerfilRef.current += 1;
     setMensaje('');
     setError('');
     setProductoEditando(null);
@@ -260,35 +279,68 @@ function AdminProductos() {
           item.nombre === producto.categoria
       );
 
-    setCategoriaId(
-      categoria
-        ? String(categoria.id)
-        : ''
-    );
+    const categoriaProductoId = categoria
+      ? String(categoria.id)
+      : '';
+
+    setCategoriaId(categoriaProductoId);
 
     setMensaje('');
     setError('');
-    setPerfilIA(PERFIL_VACIO);
     setMostrarFormulario(true);
 
-    setCargandoPerfil(true);
+    await cargarPerfilProducto(producto.id, categoriaProductoId);
+  };
+
+  const cargarPerfilProducto = async (productoId: number, categoriaProductoId: string) => {
+    const carga = ++cargaPerfilRef.current;
+    perfilOriginalRef.current = { categoriaId: categoriaProductoId, perfil: PERFIL_VACIO, estado: 'cargando' };
+    setPerfilIA(PERFIL_VACIO);
+    setEstadoPerfil('cargando');
+
+    let original: { perfil: PerfilRecomendacion; estado: EstadoCargaPerfil };
     try {
-      const respuestaPerfil = await obtenerPerfilRecomendacion(producto.id);
-      setPerfilIA(respuestaPerfil.existe_perfil ? respuestaPerfil.perfil_ia : PERFIL_VACIO);
+      const respuestaPerfil = await obtenerPerfilRecomendacion(productoId);
+      original = {
+        perfil: respuestaPerfil.existe_perfil ? respuestaPerfil.perfil_ia : PERFIL_VACIO,
+        estado: 'listo',
+      };
     } catch (errorPerfil) {
-      setError(errorPerfil instanceof Error ? errorPerfil.message : 'No se pudo cargar el perfil IA');
-    } finally {
-      setCargandoPerfil(false);
+      // Sin perfil cargado no se envía perfil_ia, así que el guardado no lo modifica.
+      original = { perfil: PERFIL_VACIO, estado: 'error' };
+      if (carga === cargaPerfilRef.current) {
+        setError(errorPerfil instanceof Error ? errorPerfil.message : 'No se pudo cargar el perfil IA');
+      }
     }
+
+    if (carga !== cargaPerfilRef.current) return;
+
+    perfilOriginalRef.current = { categoriaId: categoriaProductoId, ...original };
+    setPerfilIA(original.perfil);
+    setEstadoPerfil(original.estado);
   };
 
   const obtenerMensajeError = (datos: { error?: string | { message?: string } }, alternativa: string) =>
     typeof datos.error === 'string' ? datos.error : datos.error?.message || alternativa;
 
   const cambiarCategoriaFormulario = (siguienteId: string) => {
-    if (siguienteId !== categoriaId) setPerfilIA(PERFIL_VACIO);
+    if (siguienteId === categoriaId) return;
+
+    const original = perfilOriginalRef.current;
+    if (original && siguienteId === original.categoriaId) {
+      // De vuelta a la categoría guardada: se recupera su perfil en vez de vaciarlo.
+      setPerfilIA(original.perfil);
+      setEstadoPerfil(original.estado);
+    } else {
+      setPerfilIA(PERFIL_VACIO);
+      setEstadoPerfil('listo');
+    }
+
     setCategoriaId(siguienteId);
   };
+
+  const nombreCategoriaFormulario =
+    categorias.find((categoria) => String(categoria.id) === categoriaId)?.nombre ?? '';
 
   /*
    * CERRAR FORMULARIO
@@ -376,10 +428,7 @@ function AdminProductos() {
     try {
       setGuardando(true);
 
-      const perfilPayload = crearPayloadPerfil(
-        perfilIA,
-        categorias.find((categoria) => String(categoria.id) === categoriaId)?.nombre ?? '',
-      );
+      const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
           'http://localhost/tienda/backend/productos/crear.php',
@@ -494,10 +543,7 @@ function AdminProductos() {
     try {
       setGuardando(true);
 
-      const perfilPayload = crearPayloadPerfil(
-        perfilIA,
-        categorias.find((categoria) => String(categoria.id) === categoriaId)?.nombre ?? '',
-      );
+      const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
           'http://localhost/tienda/backend/productos/editar.php',
@@ -853,7 +899,11 @@ function AdminProductos() {
                       Categoría
                     </Label>
 
-                    <Select value={categoriaId || null} onValueChange={(value) => cambiarCategoriaFormulario(value ?? '')}>
+                    <Select
+                      value={categoriaId || null}
+                      onValueChange={(value) => cambiarCategoriaFormulario(value ?? '')}
+                      disabled={estadoPerfil === 'cargando'}
+                    >
                       <SelectTrigger id="categoria" className="w-full"><SelectValue placeholder="Selecciona una categoría" /></SelectTrigger>
                       <SelectContent>
                         {categorias.map((categoria) => <SelectItem key={categoria.id} value={String(categoria.id)}>{categoria.nombre}</SelectItem>)}
@@ -981,13 +1031,32 @@ function AdminProductos() {
 
                 </div>
 
-                <PerfilRecomendacionFields
-                  categoria={categorias.find((categoria) => String(categoria.id) === categoriaId)?.nombre ?? ''}
-                  perfil={perfilIA}
-                  onChange={setPerfilIA}
-                />
+                {estadoPerfil === 'listo' && (
+                  <PerfilRecomendacionFields
+                    categoria={nombreCategoriaFormulario}
+                    perfil={perfilIA}
+                    onChange={setPerfilIA}
+                  />
+                )}
 
-                {cargandoPerfil && <p role="status">Cargando perfil IA existente…</p>}
+                {estadoPerfil === 'cargando' && <p role="status">Cargando perfil IA existente…</p>}
+
+                {estadoPerfil === 'error' && productoEditando && (
+                  <div className="admin-ai-profile" role="alert">
+                    <p>
+                      No se pudo cargar el perfil IA de este producto. Si guardas
+                      ahora, el perfil guardado no se modificará.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => cargarPerfilProducto(productoEditando.id, perfilOriginalRef.current?.categoriaId ?? categoriaId)}
+                      disabled={guardando}
+                    >
+                      Reintentar carga del perfil
+                    </Button>
+                  </div>
+                )}
 
                 <div className="admin-form-actions">
 
@@ -995,7 +1064,7 @@ function AdminProductos() {
                     type="button"
                     className="admin-secondary-button"
                     onClick={cerrarFormulario}
-                    disabled={guardando || cargandoPerfil}
+                    disabled={guardando || estadoPerfil === 'cargando'}
                   >
                     Cancelar
                   </Button>
@@ -1003,7 +1072,7 @@ function AdminProductos() {
                   <Button
                     type="submit"
                     className="admin-primary-button"
-                    disabled={guardando || cargandoPerfil}
+                    disabled={guardando || estadoPerfil === 'cargando'}
                   >
                     {guardando
                       ? 'Guardando...'

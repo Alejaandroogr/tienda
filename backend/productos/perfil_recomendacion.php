@@ -61,35 +61,136 @@ function completarUsosOmitidosEdicionPerfilRecomendacion(
     ?string $usosExistentesJson,
     bool $categoriaCambio
 ): stdClass {
-    if (property_exists($perfil, 'usos')) {
+    return completarCampoOmitidoEdicionPerfilRecomendacion(
+        $perfil,
+        'usos',
+        $usosExistentesJson,
+        $categoriaCambio
+    );
+}
+
+/** Igual que los usos: los atributos omitidos se conservan solo en la misma categoría. */
+function completarAtributosOmitidosEdicionPerfilRecomendacion(
+    stdClass $perfil,
+    ?string $atributosExistentesJson,
+    bool $categoriaCambio
+): stdClass {
+    return completarCampoOmitidoEdicionPerfilRecomendacion(
+        $perfil,
+        'atributos',
+        $atributosExistentesJson,
+        $categoriaCambio
+    );
+}
+
+/** @param 'usos'|'atributos' $campo */
+function completarCampoOmitidoEdicionPerfilRecomendacion(
+    stdClass $perfil,
+    string $campo,
+    ?string $valorExistenteJson,
+    bool $categoriaCambio
+): stdClass {
+    if (property_exists($perfil, $campo)) {
         return $perfil;
     }
 
-    if ($categoriaCambio || $usosExistentesJson === null) {
-        $perfil->usos = new stdClass();
+    if ($categoriaCambio || $valorExistenteJson === null) {
+        $perfil->{$campo} = new stdClass();
         return $perfil;
     }
 
     try {
-        $usosExistentes = json_decode($usosExistentesJson, false, 16, JSON_THROW_ON_ERROR);
+        $valorExistente = json_decode($valorExistenteJson, false, 16, JSON_THROW_ON_ERROR);
     } catch (JsonException $error) {
         throw new ErrorPerfilRecomendacion(
             'invalid_stored_profile',
-            'No se pudieron conservar los usos del perfil existente',
+            "No se pudieron conservar los {$campo} del perfil existente",
             500
         );
     }
 
-    if (!$usosExistentes instanceof stdClass) {
+    if (!$valorExistente instanceof stdClass) {
         throw new ErrorPerfilRecomendacion(
             'invalid_stored_profile',
-            'Los usos del perfil existente no tienen un formato válido',
+            "Los {$campo} del perfil existente no tienen un formato válido",
             500
         );
     }
 
-    $perfil->usos = $usosExistentes;
+    $perfil->{$campo} = $valorExistente;
     return $perfil;
+}
+
+function categoriaAdmitePerfilRecomendacion(string $categoria): bool
+{
+    try {
+        esquemaPerfilPorCategoria($categoria);
+    } catch (ErrorPerfilRecomendacion) {
+        return false;
+    }
+
+    return true;
+}
+
+/** Un perfil es vacío si es null o si sus usos y atributos no contienen ningún valor. */
+function perfilRecomendacionVacio(mixed $perfil): bool
+{
+    if ($perfil === null) {
+        return true;
+    }
+
+    if (!$perfil instanceof stdClass) {
+        return false;
+    }
+
+    foreach (get_object_vars($perfil) as $valor) {
+        if ($valor === null) {
+            continue;
+        }
+
+        if (!$valor instanceof stdClass) {
+            return false;
+        }
+
+        foreach (get_object_vars($valor) as $elemento) {
+            if ($elemento !== null && $elemento !== '' && $elemento !== []) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Decide qué hacer con el perfil al crear o editar un producto.
+ * Las categorías sin esquema no admiten perfil: un perfil vacío se ignora y,
+ * si el producto se mueve a una de ellas, el perfil anterior se elimina.
+ *
+ * @return 'guardar'|'restablecer'|'eliminar'|'ninguna'
+ */
+function planificarPerfilProductoRecomendacion(
+    bool $perfilEnviado,
+    mixed $perfil,
+    bool $admitePerfil,
+    bool $categoriaCambio
+): string {
+    if (!$admitePerfil) {
+        if ($perfilEnviado && !perfilRecomendacionVacio($perfil)) {
+            throw new ErrorPerfilRecomendacion(
+                'invalid_category',
+                'La categoría del producto no está habilitada para perfiles IA'
+            );
+        }
+
+        return $categoriaCambio ? 'eliminar' : 'ninguna';
+    }
+
+    if ($perfilEnviado) {
+        return 'guardar';
+    }
+
+    return $categoriaCambio ? 'restablecer' : 'ninguna';
 }
 
 /** @return array{usos: list<string>, atributos: array<string, array<string, mixed>>} */
