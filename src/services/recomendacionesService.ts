@@ -1,7 +1,6 @@
 import type { Producto } from '../types/Producto';
 import type {
   CodigoErrorRecomendaciones,
-  MensajeSinRecomendaciones,
   RespuestaErrorRecomendaciones,
   RespuestaRecomendaciones,
   SolicitudRecomendaciones,
@@ -26,13 +25,7 @@ export class ErrorRecomendaciones extends Error {
   }
 }
 
-const MENSAJES_SIN_RECOMENDACIONES: readonly MensajeSinRecomendaciones[] = [
-  'No hay productos disponibles en este momento.',
-  'No hay productos disponibles dentro de ese presupuesto.',
-  'No encontramos coincidencias claras en el catálogo para esa búsqueda y uso. Prueba con otros términos.',
-  'No encontramos productos que encajen con lo que buscas dentro de tu presupuesto.',
-  'Los productos recomendados ya no están disponibles dentro de tu presupuesto. Inténtalo de nuevo.',
-];
+const LONGITUD_MAXIMA_MENSAJE = 500;
 
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === 'object' && valor !== null && !Array.isArray(valor);
@@ -69,43 +62,31 @@ function normalizarRespuestaRecomendaciones(
     return null;
   }
 
-  // Compatibilidad con respuestas antiguas: candidates se normaliza a [].
-  const candidates = valor.candidates === undefined ? [] : valor.candidates;
-  if (!Array.isArray(candidates)) {
+  // Solo se muestran los recomendados: un campo candidates de una versión
+  // anterior del backend se ignora.
+  if (!valor.recommendations.every(esProductoRecomendado)) {
     return null;
   }
 
-  if (
-    !valor.recommendations.every(esProductoRecomendado) ||
-    !candidates.every(esProductoRecomendado)
-  ) {
-    return null;
-  }
-
-  let message: MensajeSinRecomendaciones | undefined;
+  let message: string | undefined;
   if (valor.message !== undefined) {
+    // React muestra el texto escapado; basta con exigir un texto acotado.
     if (
       typeof valor.message !== 'string' ||
-      !MENSAJES_SIN_RECOMENDACIONES.includes(
-        valor.message as MensajeSinRecomendaciones
-      )
+      valor.message.trim() === '' ||
+      valor.message.length > LONGITUD_MAXIMA_MENSAJE
     ) {
       return null;
     }
-    message = valor.message as MensajeSinRecomendaciones;
+    message = valor.message;
   }
 
-  if (
-    valor.recommendations.length === 0 &&
-    candidates.length === 0 &&
-    message === undefined
-  ) {
+  if (valor.recommendations.length === 0 && message === undefined) {
     return null;
   }
 
   return {
     recommendations: valor.recommendations as RespuestaRecomendaciones['recommendations'],
-    candidates: candidates as RespuestaRecomendaciones['candidates'],
     ...(message === undefined ? {} : { message }),
   };
 }

@@ -47,36 +47,21 @@ function conJsonMalformado() {
   };
 }
 
-test('acepta solo recomendaciones confirmadas', async () => {
+test('acepta recomendaciones sin mensaje', async () => {
   const restaurar = conFetchMock({
-    recommendations: [{ producto, reason: 'Criterio técnico verificado.' }],
-    candidates: [],
+    recommendations: [{ producto, reason: 'Criterio técnico verificado.', source: 'php' }],
   });
   try {
     const respuesta = await solicitarRecomendaciones(solicitud);
     assert.equal(respuesta.recommendations.length, 1);
-    assert.deepEqual(respuesta.candidates, []);
+    assert.equal(respuesta.recommendations[0].reason, 'Criterio técnico verificado.');
+    assert.equal(respuesta.message, undefined);
   } finally {
     restaurar();
   }
 });
 
-test('acepta solo candidatos sin message', async () => {
-  const restaurar = conFetchMock({
-    recommendations: [],
-    candidates: [{ producto, reason: 'Idoneidad no confirmada.' }],
-  });
-  try {
-    const respuesta = await solicitarRecomendaciones(solicitud);
-    assert.deepEqual(respuesta.recommendations, []);
-    assert.equal(respuesta.candidates.length, 1);
-    assert.equal(respuesta.candidates[0].reason, 'Idoneidad no confirmada.');
-  } finally {
-    restaurar();
-  }
-});
-
-test('acepta recomendaciones y candidatos en listas separadas', async () => {
+test('descarta el grupo candidates de un backend anterior', async () => {
   const restaurar = conFetchMock({
     recommendations: [{ producto, reason: 'Confirmada.' }],
     candidates: [{ producto: { ...producto, id: 7 }, reason: 'No confirmada.' }],
@@ -84,43 +69,45 @@ test('acepta recomendaciones y candidatos en listas separadas', async () => {
   try {
     const respuesta = await solicitarRecomendaciones(solicitud);
     assert.equal(respuesta.recommendations.length, 1);
-    assert.equal(respuesta.candidates.length, 1);
+    assert.equal('candidates' in respuesta, false);
   } finally {
     restaurar();
   }
 });
 
-test('exige y conserva un mensaje válido cuando ambas listas están vacías', async () => {
-  const message = 'No encontramos coincidencias claras en el catálogo para esa búsqueda y uso. Prueba con otros términos.';
-  const restaurar = conFetchMock({ recommendations: [], candidates: [], message });
+test('no muestra candidatos aunque lleguen sin recomendados ni mensaje', async () => {
+  const restaurar = conFetchMock({
+    recommendations: [],
+    candidates: [{ producto, reason: 'Idoneidad no confirmada.' }],
+  });
+  try {
+    await assert.rejects(solicitarRecomendaciones(solicitud), (error) => {
+      assert.ok(error instanceof ErrorRecomendaciones);
+      assert.equal(error.code, 'invalid_response');
+      return true;
+    });
+  } finally {
+    restaurar();
+  }
+});
+
+test('conserva el mensaje cuando no hay recomendados', async () => {
+  const message = 'No hay productos que cumplan todo lo que pides. Prueba a ampliar el presupuesto o cambiar la búsqueda.';
+  const restaurar = conFetchMock({ recommendations: [], message });
   try {
     const respuesta = await solicitarRecomendaciones(solicitud);
     assert.deepEqual(respuesta.recommendations, []);
-    assert.deepEqual(respuesta.candidates, []);
     assert.equal(respuesta.message, message);
   } finally {
     restaurar();
   }
 });
 
-test('normaliza respuestas antiguas sin candidates', async () => {
-  const restaurar = conFetchMock({
-    recommendations: [{ producto, reason: 'Respuesta anterior.' }],
-  });
-  try {
-    const respuesta = await solicitarRecomendaciones(solicitud);
-    assert.deepEqual(respuesta.candidates, []);
-  } finally {
-    restaurar();
-  }
-});
-
-test('mantiene compatibilidad con la respuesta antigua vacía con message', async () => {
-  const message = 'No hay productos disponibles dentro de ese presupuesto.';
+test('acepta el mensaje dinámico con el producto más barato', async () => {
+  const message = 'No hay productos de Auriculares dentro de tu presupuesto (100,00 €). El más barato disponible es «Logitech G Pro X», por 129,00 €.';
   const restaurar = conFetchMock({ recommendations: [], message });
   try {
     const respuesta = await solicitarRecomendaciones(solicitud);
-    assert.deepEqual(respuesta.candidates, []);
     assert.equal(respuesta.message, message);
   } finally {
     restaurar();
@@ -157,11 +144,13 @@ test('rechaza JSON malformado como respuesta inválida', async () => {
   }
 });
 
-test('rechaza listas malformadas y respuesta vacía sin mensaje', async (context) => {
+test('rechaza recomendaciones malformadas y mensajes vacíos o demasiado largos', async (context) => {
   const respuestasInvalidas = [
-    { recommendations: [], candidates: { producto, reason: 'no es lista' } },
-    { recommendations: [], candidates: [] },
-    { recommendations: [], candidates: [{ producto, reason: 42 }] },
+    { recommendations: { producto, reason: 'no es lista' } },
+    { recommendations: [] },
+    { recommendations: [{ producto, reason: 42 }] },
+    { recommendations: [], message: '   ' },
+    { recommendations: [], message: 'x'.repeat(501) },
   ];
 
   for (const respuestaInvalida of respuestasInvalidas) {

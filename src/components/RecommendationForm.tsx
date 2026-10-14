@@ -307,9 +307,7 @@ function RecommendationForm() {
             </p>
           )}
 
-          {respuesta &&
-            respuesta.recommendations.length === 0 &&
-            respuesta.candidates.length === 0 && (
+          {respuesta && respuesta.recommendations.length === 0 && (
             <p className="recommendation-feedback" role="status" aria-live="polite">
               {respuesta.message}
             </p>
@@ -323,23 +321,6 @@ function RecommendationForm() {
                   <TarjetaProductoRecomendado
                     key={recomendacion.producto.id}
                     {...recomendacion}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {respuesta && respuesta.candidates.length > 0 && (
-            <section className="recommendation-results" aria-labelledby="recommendation-candidates-title">
-              <h3 id="recommendation-candidates-title">Podrían servirte</h3>
-              <p className="recommendation-feedback">
-                Cumplen parte de lo que buscas o les faltan datos para confirmarlo. En cada uno te indicamos qué cumple y qué no.
-              </p>
-              <ul className="recommendation-product-list">
-                {respuesta.candidates.map((candidato) => (
-                  <TarjetaProductoRecomendado
-                    key={candidato.producto.id}
-                    {...candidato}
                   />
                 ))}
               </ul>

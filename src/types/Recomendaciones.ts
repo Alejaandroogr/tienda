@@ -16,26 +16,18 @@ export interface ProductoRecomendado {
   source?: 'ollama' | 'php';
 }
 
-/** Producto que podría servir: cumple parte de los criterios o le faltan datos. */
-export type ProductoCandidato = ProductoRecomendado;
-
-export type MensajeSinRecomendaciones =
-  | 'No hay productos disponibles en este momento.'
-  | 'No hay productos disponibles dentro de ese presupuesto.'
-  | 'No encontramos coincidencias claras en el catálogo para esa búsqueda y uso. Prueba con otros términos.'
-  | 'No encontramos productos que encajen con lo que buscas dentro de tu presupuesto.'
-  | 'Los productos recomendados ya no están disponibles dentro de tu presupuesto. Inténtalo de nuevo.';
-
 export interface RespuestaRecomendacionesConResultados {
   recommendations: ProductoRecomendado[];
-  candidates: ProductoCandidato[];
-  message?: MensajeSinRecomendaciones;
+  message?: string;
 }
 
+/**
+ * Sin recomendaciones, el backend explica por qué (puede incluir el producto
+ * más barato de la categoría, por eso el texto no es fijo).
+ */
 export interface RespuestaRecomendacionesSinResultados {
   recommendations: [];
-  candidates: [];
-  message: MensajeSinRecomendaciones;
+  message: string;
 }
 
 export type RespuestaRecomendaciones =

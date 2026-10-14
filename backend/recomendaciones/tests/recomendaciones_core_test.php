@@ -108,17 +108,24 @@ comprobar(!candidatoCumpleFiltrosDurosRecomendaciones(array_replace($portatilAsu
 $asusGaming = evaluarProductoRecomendaciones($portatilAsus, 'portátil gaming', 'jugar', true);
 comprobar($asusGaming['classification'] === 'confirmed', 'portátil con los tres criterios es recomendado');
 comprobar(str_contains($asusGaming['reason'], 'NVIDIA GeForce RTX 4050 Laptop GPU'), 'motivo cita la GPU real');
-comprobar(str_contains($asusGaming['reason'], '144 Hz') && str_contains($asusGaming['reason'], '16 GB'), 'motivo cita RAM y frecuencia reales');
+comprobar(str_contains($asusGaming['reason'], 'pantalla de 144 Hz (mínimo 120 Hz)'), 'texto numérico: primero el valor real y luego el mínimo');
+comprobar(str_contains($asusGaming['reason'], 'RAM de 16 GB (mínimo 16 GB)'), 'texto de RAM con valor real y mínimo');
 
 $macGaming = evaluarProductoRecomendaciones($portatilMac, 'portátil gaming', 'jugar', true);
 comprobar($macGaming['classification'] === 'candidate', 'GPU integrada puntúa menos pero no descarta (antes: excluido)');
-comprobar(str_contains($macGaming['reason'], 'No cumple') && str_contains($macGaming['reason'], 'GPU integrada'), 'motivo explica qué no cumple');
+comprobar(
+    str_contains($macGaming['reason'], 'No cumple: GPU integrada (se pide dedicada); pantalla de 60 Hz (mínimo 120 Hz).'),
+    'motivo explica qué no cumple con valor real y mínimo'
+);
 comprobar($macGaming['puntuacion'] < $asusGaming['puntuacion'], 'GPU integrada puntúa por debajo');
 
 $asusSinDatos = array_replace($portatilAsus, ['especificaciones' => ['cpu_modelo' => 'Ryzen 7']]);
 $sinDatos = evaluarProductoRecomendaciones($asusSinDatos, 'portátil gaming', 'jugar', true);
 comprobar($sinDatos['classification'] === 'candidate', 'datos ausentes llevan a «podría servirte», no a excluido');
-comprobar(str_contains($sinDatos['reason'], 'Sin dato registrado'), 'motivo indica los datos que faltan');
+comprobar(
+    str_contains($sinDatos['reason'], 'Sin dato registrado: tipo de GPU (se pide dedicada); RAM (mínimo 16 GB); frecuencia de pantalla (mínimo 120 Hz).'),
+    'motivo indica los datos que faltan y el mínimo exigido'
+);
 
 $asusParcial = array_replace($portatilAsus, ['especificaciones' => ['gpu_tipo' => 'dedicada', 'ram_gb' => 16]]);
 comprobar(clasificacion($asusParcial, 'portátil gaming', 'jugar') === 'candidate', 'un criterio sin dato impide recomendar');
@@ -162,7 +169,11 @@ comprobar(
 comprobar(clasificacion($auricularLogitech, 'auriculares para jugar', 'jugar') === 'confirmed', 'auricular con los tres criterios es recomendado');
 $airPodsGaming = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares para jugar', 'jugar', true);
 comprobar($airPodsGaming['classification'] === 'candidate', 'solo Bluetooth puntúa menos pero no descarta');
-comprobar(str_contains($airPodsGaming['reason'], 'bluetooth'), 'motivo cita la conexión real');
+comprobar(str_contains($airPodsGaming['reason'], 'conexión Bluetooth (se pide 2.4 GHz o cable)'), 'motivo cita la conexión real y lo que se pide');
+comprobar(
+    str_contains(evaluarProductoRecomendaciones($auricularLogitech, 'auriculares para jugar', 'jugar', true)['reason'], 'conexión inalámbrica 2.4 GHz (USB) (baja latencia)'),
+    'motivo nombra la conexión de forma legible'
+);
 
 $sinMicrofonoDato = array_replace($auricularLogitech, ['especificaciones' => ['conexion' => ['jack']]]);
 comprobar(clasificacion($sinMicrofonoDato, 'auriculares para jugar', 'jugar') === 'candidate', 'micrófono sin dato impide recomendar');
@@ -186,8 +197,19 @@ comprobar(
 
 // Requisito explícito de micrófono fuera del uso gaming.
 $conMicrofono = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares con micrófono', 'llamadas', true);
-comprobar($conMicrofono['classification'] === 'candidate', 'sin uso reconocido el producto de la categoría puede servir');
-comprobar(str_contains($conMicrofono['reason'], 'micrófono, como pides'), 'motivo confirma el micrófono pedido');
+comprobar($conMicrofono['classification'] === 'confirmed', 'sin uso concreto, la característica pedida y confirmada recomienda (antes: podría servir)');
+comprobar($conMicrofono['reason'] === 'Cumple lo que pides: micrófono.', 'motivo confirma el micrófono pedido');
+comprobar(
+    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['conexion' => ['bluetooth']]]), 'auriculares con micrófono', 'llamadas') === 'candidate',
+    'característica pedida sin dato no recomienda'
+);
+comprobar(
+    clasificacion($auricularAirPods, 'auriculares para jugar con micrófono', 'jugar') === 'candidate',
+    'con un uso concreto mandan sus criterios, no solo la característica pedida'
+);
+comprobar(clasificacion($portatilAsus, 'portátil con GPU dedicada', 'trabajo diario') === 'confirmed', 'GPU dedicada pedida y confirmada recomienda');
+comprobar(clasificacion($portatilMac, 'portátil con GPU dedicada', 'trabajo diario') === 'excluded', 'GPU dedicada pedida y contradicha excluye');
+comprobar(clasificacion($portatilAsus, 'portátil ligero', 'trabajo diario') === 'candidate', 'sin uso ni característica pedida no se recomienda');
 comprobar(
     clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['microfono' => false]]), 'auriculares con micrófono', 'llamadas') === 'excluded',
     'micrófono pedido y ausente excluye'
@@ -271,10 +293,9 @@ comprobar(
 $grafica = ['id' => 2, 'nombre' => 'NVIDIA RTX 5070', 'descripcion' => '', 'categoria' => 'Tarjetas gráficas', 'precio' => '649.99', 'stock' => 5, 'categoria_id' => 2, 'especificaciones' => ['vram_gb' => 12], 'usos' => []];
 comprobar(clasificacion($grafica, 'gráfica para jugar', 'jugar') === 'confirmed', 'gráfica con 12 GB de VRAM es recomendada');
 comprobar(clasificacion(array_replace($grafica, ['especificaciones' => ['vram_gb' => 6]]), 'gráfica para jugar', 'jugar') === 'candidate', 'gráfica con 6 GB podría servir');
-comprobar(
-    clasificacion(['categoria' => 'Procesadores', 'nombre' => 'Ryzen', 'especificaciones' => ['nucleos' => 8]], 'procesador para jugar', 'jugar') === 'confirmed',
-    'procesador de 8 núcleos es recomendado'
-);
+$procesador = evaluarProductoRecomendaciones(['categoria' => 'Procesadores', 'nombre' => 'Ryzen', 'especificaciones' => ['nucleos' => 8]], 'procesador para jugar', 'jugar', true);
+comprobar($procesador['classification'] === 'confirmed', 'procesador de 8 núcleos es recomendado');
+comprobar(str_contains($procesador['reason'], '8 núcleos (mínimo 6)'), 'texto de núcleos con valor real y mínimo');
 comprobar(
     clasificacion(['categoria' => 'Móviles', 'nombre' => 'iPhone', 'especificaciones' => ['ram_gb' => 8]], 'móvil para jugar', 'jugar') === 'confirmed',
     'móvil con 8 GB de RAM es recomendado'
@@ -398,6 +419,24 @@ $repetidas = validarRespuestaModeloRecomendaciones(['orden' => [
 ]], ['7' => $airPodsMicrofono, '8' => $airPodsMicrofono]);
 comprobar($repetidas[7] === null && $repetidas[8] === null, 'descarta el mismo texto repetido para productos distintos');
 comprobar(array_keys($repetidas) === [7, 8], 'aunque descarte los textos, conserva el orden propuesto');
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [
+        ['id' => 7, 'explicacion' => 'Los auric: tiene micrófono, como pide el cliente. Cumple lo que pides: micrófono.'],
+    ]], ['7' => $airPodsMicrofono], 'auriculares con micrófono uso diario')[7] === null,
+    'descarta una palabra cortada («auric»)'
+);
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [
+        ['id' => 7, 'explicacion' => 'Tiene micrófono, así que cumple lo que pides para el uso diario.'],
+    ]], ['7' => $airPodsMicrofono], 'auriculares con micrófono uso diario')[7] !== null,
+    'acepta palabras que vienen de la consulta'
+);
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [
+        ['id' => 7, 'explicacion' => 'Tiene micrófono y además resulta elegante, ligero, resistente y versátil en cualquier situación.'],
+    ]], ['7' => $airPodsMicrofono], 'auriculares con micrófono')[7] === null,
+    'descarta explicaciones con demasiadas palabras ajenas a los datos'
+);
 
 esperarError(fn () => validarRespuestaModeloRecomendaciones(['orden' => [['id' => 999, 'explicacion' => 'x']]], $productosModelo), 'invalid_product_id', 'ID que no se pasó al modelo');
 esperarError(fn () => validarRespuestaModeloRecomendaciones(['orden' => [['id' => 1, 'explicacion' => 'x'], ['id' => 1, 'explicacion' => 'x']]], $productosModelo), 'invalid_model_response', 'ID repetido');
@@ -405,26 +444,50 @@ esperarError(fn () => validarRespuestaModeloRecomendaciones(['recommendations' =
 esperarError(fn () => validarRespuestaModeloRecomendaciones(null, $productosModelo), 'invalid_model_response', 'contenido vacío');
 
 // ---------------------------------------------------------------------------
-// Respuesta pública: el modelo reordena dentro del nivel, nunca entre niveles
+// Respuesta pública: solo los recomendados; el modelo solo los reordena
 // ---------------------------------------------------------------------------
 
 $publicos = ['1' => ['id' => 1, 'nombre' => 'A'], '2' => ['id' => 2, 'nombre' => 'B'], '3' => ['id' => 3, 'nombre' => 'C']];
 $nivelesRespuesta = [
-    'confirmed' => [['id' => 1, 'reason' => 'Texto PHP 1']],
-    'candidate' => [['id' => 2, 'reason' => 'Texto PHP 2'], ['id' => 3, 'reason' => 'Texto PHP 3']],
+    'confirmed' => [['id' => 1, 'reason' => 'Texto PHP 1'], ['id' => 2, 'reason' => 'Texto PHP 2']],
+    'candidate' => [['id' => 3, 'reason' => 'Texto PHP 3']],
 ];
-$sinModelo = construirRespuestaMixtaRecomendaciones($nivelesRespuesta, $publicos);
-comprobar(count($sinModelo['recommendations']) === 1 && count($sinModelo['candidates']) === 2, 'sin modelo se usan los niveles de PHP');
-comprobar($sinModelo['candidates'][0]['reason'] === 'Texto PHP 2' && $sinModelo['candidates'][0]['source'] === 'php', 'sin modelo se usa el texto de PHP');
-comprobar(!isset($sinModelo['message']), 'sin mensaje cuando hay resultados');
+$sinModelo = construirRespuestaRecomendaciones($nivelesRespuesta, $publicos);
+comprobar(array_keys($sinModelo) === ['recommendations'], 'la respuesta no incluye «podrían servirte» ni mensaje cuando hay recomendados');
+comprobar(array_column(array_column($sinModelo['recommendations'], 'producto'), 'id') === [1, 2], 'sin modelo se usa el orden de PHP');
+comprobar($sinModelo['recommendations'][0]['reason'] === 'Texto PHP 1' && $sinModelo['recommendations'][0]['source'] === 'php', 'sin modelo se usa el texto de PHP');
 
-$conModelo = construirRespuestaMixtaRecomendaciones($nivelesRespuesta, $publicos, [3 => 'Explicación del modelo para C', 1 => null, 2 => 'Explicación del modelo para B']);
-comprobar(array_column(array_column($conModelo['candidates'], 'producto'), 'id') === [3, 2], 'el modelo reordena dentro de «podrían servirte»');
-comprobar($conModelo['recommendations'][0]['producto']['id'] === 1, 'el modelo no mueve productos entre niveles');
-comprobar($conModelo['recommendations'][0]['reason'] === 'Texto PHP 1' && $conModelo['recommendations'][0]['source'] === 'php', 'explicación descartada usa el texto de PHP');
-comprobar($conModelo['candidates'][0]['source'] === 'ollama', 'explicación verificada del modelo se marca como tal');
+$conModelo = construirRespuestaRecomendaciones($nivelesRespuesta, $publicos, [2 => 'Explicación del modelo para B', 1 => null, 3 => 'No debe aparecer']);
+comprobar(array_column(array_column($conModelo['recommendations'], 'producto'), 'id') === [2, 1], 'el modelo reordena los recomendados');
+comprobar($conModelo['recommendations'][0]['source'] === 'ollama', 'explicación verificada del modelo se marca como tal');
+comprobar($conModelo['recommendations'][1]['reason'] === 'Texto PHP 1' && $conModelo['recommendations'][1]['source'] === 'php', 'explicación descartada usa el texto de PHP');
+comprobar(count($conModelo['recommendations']) === 2, 'un producto que no es recomendado nunca se muestra, aunque el modelo lo mencione');
 
-$vacia = construirRespuestaMixtaRecomendaciones(['confirmed' => [], 'candidate' => []], []);
-comprobar($vacia['recommendations'] === [] && $vacia['candidates'] === [] && str_contains($vacia['message'], 'No encontramos'), 'sin productos devuelve mensaje informativo');
+$soloCandidatos = construirRespuestaRecomendaciones(['confirmed' => [], 'candidate' => [['id' => 3, 'reason' => 'x']]], $publicos);
+comprobar($soloCandidatos['recommendations'] === [], 'sin recomendados no se muestra ningún producto');
+comprobar(
+    $soloCandidatos['message'] === 'No hay productos que cumplan todo lo que pides. Prueba a ampliar el presupuesto o cambiar la búsqueda.',
+    'sin recomendados se muestra el mensaje claro'
+);
+
+// Mensaje sin productos dentro del presupuesto.
+comprobar(
+    mensajeSinProductosEnPresupuestoRecomendaciones(['Auriculares'], '100.00', ['nombre' => 'Logitech G Pro X', 'precio' => '129.00']) ===
+        'No hay productos de Auriculares dentro de tu presupuesto (100,00 €). El más barato disponible es «Logitech G Pro X», por 129,00 €.',
+    'indica el más barato de la categoría y su precio'
+);
+comprobar(
+    mensajeSinProductosEnPresupuestoRecomendaciones(['Portátiles'], '500.00', ['nombre' => 'X', 'precio' => '1449.00']) ===
+        'No hay productos de Portátiles dentro de tu presupuesto (500,00 €). El más barato disponible es «X», por 1.449,00 €.',
+    'formatea los miles al estilo español'
+);
+comprobar(
+    mensajeSinProductosEnPresupuestoRecomendaciones(['Procesadores'], '100.00', null) === 'No hay productos de Procesadores disponibles en este momento.',
+    'sin stock en la categoría no inventa un producto'
+);
+comprobar(
+    mensajeSinProductosEnPresupuestoRecomendaciones([], '50.00', null) === 'No hay productos disponibles dentro de tu presupuesto (50,00 €).',
+    'sin categoría pedida el mensaje es genérico'
+);
 
 echo "OK: {$comprobaciones} comprobaciones\n";
