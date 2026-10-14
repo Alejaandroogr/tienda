@@ -292,6 +292,14 @@ function criteriosIntencionRecomendaciones(
     string $textoProducto,
     string $necesidadVoz
 ): ?array {
+    if ($intencion === 'programacion') {
+        return match ($categoria) {
+            'portatiles' => [criterioMinimoRecomendaciones($especificaciones, 'ram_gb', 16, 'RAM de %s', 'RAM', 'GB')],
+            'procesadores' => [criterioMinimoRecomendaciones($especificaciones, 'nucleos', 8, '%s núcleos', 'núcleos')],
+            default => null,
+        };
+    }
+
     if ($intencion !== 'gaming') {
         return null;
     }
@@ -375,8 +383,9 @@ function criteriosIntencionRecomendaciones(
 function clavesPertinentesIntencionRecomendaciones(string $categoria, ?string $intencion): array
 {
     $mapa = [
-        'portatiles' => ['programacion' => ['cpu_modelo', 'ram_gb']],
-        'procesadores' => ['programacion' => ['nucleos', 'hilos']],
+        // RAM y núcleos son criterios de programación; aquí solo quedan datos informativos.
+        'portatiles' => ['programacion' => ['cpu_modelo', 'autonomia_h']],
+        'procesadores' => ['programacion' => ['hilos']],
         'auriculares' => ['gimnasio' => ['resistencia_ip', 'formato', 'peso_g', 'autonomia_h']],
         'smartwatch' => ['gimnasio' => ['resistencia_agua_atm', 'gps', 'autonomia_dias']],
     ];
@@ -475,6 +484,12 @@ function evaluarProductoRecomendaciones(
 
     if ($valoracionTienda === 'adecuado') {
         $puntuacion += 1;
+    }
+    // Para programar, la autonomía de un portátil solo ordena (más horas, más arriba);
+    // el bonus es menor que un criterio para no alterar el nivel ni pesar más que él.
+    $autonomia = $especificaciones['autonomia_h'] ?? null;
+    if ($categoria === 'portatiles' && $intencion === 'programacion' && (is_int($autonomia) || is_float($autonomia))) {
+        $puntuacion += min((float) $autonomia, 24.0) / 48;
     }
     // En portátiles, el texto «gaming» solo ordena; nunca confirma.
     if ($categoria === 'portatiles' && $intencion === 'gaming' && senalTextoGamingRecomendaciones($textoProducto) !== null) {

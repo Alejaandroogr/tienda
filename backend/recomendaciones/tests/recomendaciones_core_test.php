@@ -307,14 +307,68 @@ comprobar(clasificacion($reloj, 'algo para jugar', 'jugar', false) === 'excluded
 comprobar(clasificacion($grafica, 'algo para jugar', 'jugar', false) === 'confirmed', 'gráfica sí entra en una búsqueda gaming sin categoría');
 comprobar(clasificacion($reloj, 'smartwatch', 'diario', true) === 'candidate', 'con categoría pedida y sin uso reconocido, el producto puede servir');
 
-// Programación: sin criterios aprobados, solo datos informativos y valoración del administrador.
-$programar = evaluarProductoRecomendaciones($portatilMac, 'portátil para programar, no para juegos', 'programar', true);
-comprobar($programar['classification'] === 'candidate', 'programación sin criterios aprobados no confirma por datos');
-comprobar(str_contains($programar['reason'], 'CPU: Apple M5') && !str_contains($programar['reason'], 'GPU'), 'programación muestra CPU y RAM, no criterios gaming');
+// Programación (opción A): portátiles con RAM >= 16 GB; la autonomía solo ordena.
+$portatilMacConAutonomia = array_replace_recursive($portatilMac, ['especificaciones' => ['autonomia_h' => 18]]);
+$programar = evaluarProductoRecomendaciones($portatilMacConAutonomia, 'portátil para programar, no para juegos', 'programar', true);
+comprobar($programar['classification'] === 'confirmed', 'portátil con 16 GB de RAM es recomendado para programar (antes: podría servir)');
+comprobar(str_contains($programar['reason'], 'Cumple los criterios para programar: RAM de 16 GB (mínimo 16 GB).'), 'motivo de programación con valor real y mínimo');
 comprobar(
-    clasificacion(array_replace($portatilMac, ['usos' => ['programacion' => 'adecuado']]), 'portátil para programar', 'programar') === 'confirmed',
-    'valoración «adecuado» para programar confirma'
+    str_contains($programar['reason'], 'CPU: Apple M5') && str_contains($programar['reason'], 'Autonomía: 18 h') && !str_contains($programar['reason'], 'GPU'),
+    'programación informa de CPU y autonomía, no de criterios gaming'
 );
+comprobar(
+    clasificacion(array_replace_recursive($portatilMac, ['especificaciones' => ['ram_gb' => 8]]), 'portátil para programar', 'programar') === 'candidate',
+    'portátil con 8 GB de RAM no se recomienda para programar'
+);
+comprobar(
+    clasificacion(array_replace($portatilMac, ['especificaciones' => ['cpu_modelo' => 'Apple M5']]), 'portátil para programar', 'programar') === 'candidate',
+    'sin dato de RAM no se recomienda para programar'
+);
+comprobar(clasificacion($portatilAsus, 'portátil para programar', 'programar') === 'confirmed', 'sin dato de autonomía no impide recomendar');
+$conAutonomia = evaluarProductoRecomendaciones($portatilMacConAutonomia, 'portátil para programar', 'programar', true);
+$sinAutonomia = evaluarProductoRecomendaciones($portatilAsus, 'portátil para programar', 'programar', true);
+$pocaAutonomia = evaluarProductoRecomendaciones(array_replace_recursive($portatilMac, ['especificaciones' => ['autonomia_h' => 5]]), 'portátil para programar', 'programar', true);
+comprobar(
+    $conAutonomia['puntuacion'] > $pocaAutonomia['puntuacion'] && $pocaAutonomia['puntuacion'] > $sinAutonomia['puntuacion'],
+    'la autonomía ordena: más horas, más arriba'
+);
+comprobar(
+    evaluarProductoRecomendaciones(array_replace_recursive($portatilMac, ['especificaciones' => ['autonomia_h' => 1000]]), 'portátil para programar', 'programar', true)['puntuacion'] < 2,
+    'la autonomía nunca pesa tanto como un criterio'
+);
+comprobar(
+    evaluarProductoRecomendaciones($portatilMacConAutonomia, 'portátil gaming', 'jugar', true)['puntuacion'] ===
+        evaluarProductoRecomendaciones($portatilMac, 'portátil gaming', 'jugar', true)['puntuacion'],
+    'la autonomía no influye fuera de programar'
+);
+$ordenProgramar = agruparPorNivelRecomendaciones([
+    ['id' => 1, 'precio' => '899.99'] + $sinAutonomia,
+    ['id' => 6, 'precio' => '1449.00'] + $conAutonomia,
+]);
+comprobar(array_column($ordenProgramar['confirmed'], 'id') === [6, 1], 'con los datos reales, el MacBook (18 h) va antes que el ASUS');
+comprobar(
+    clasificacion(array_replace($portatilMac, ['especificaciones' => ['cpu_modelo' => 'Apple M5'], 'usos' => ['programacion' => 'adecuado']]), 'portátil para programar', 'programar') === 'confirmed',
+    'valoración «adecuado» para programar confirma aunque falte la RAM'
+);
+comprobar(
+    clasificacion(array_replace_recursive($portatilMac, ['especificaciones' => ['ram_gb' => 8], 'usos' => ['programacion' => 'adecuado']]), 'portátil para programar', 'programar') === 'candidate',
+    'valoración «adecuado» no confirma si la RAM lo contradice'
+);
+
+// Programación en procesadores: 8 núcleos o más.
+$procesadorProgramar = evaluarProductoRecomendaciones(['categoria' => 'Procesadores', 'nombre' => 'Ryzen', 'especificaciones' => ['nucleos' => 8]], 'procesador para programar', 'programar', true);
+comprobar($procesadorProgramar['classification'] === 'confirmed', 'procesador de 8 núcleos es recomendado para programar');
+comprobar(str_contains($procesadorProgramar['reason'], '8 núcleos (mínimo 8)'), 'motivo del procesador con valor real y mínimo');
+comprobar(
+    clasificacion(['categoria' => 'Procesadores', 'nombre' => 'Ryzen', 'especificaciones' => ['nucleos' => 6]], 'procesador para programar', 'programar') === 'candidate',
+    'procesador de 6 núcleos no se recomienda para programar (aunque sí para jugar)'
+);
+comprobar(
+    clasificacion(['categoria' => 'Procesadores', 'nombre' => 'Ryzen', 'especificaciones' => ['nucleos' => 6]], 'procesador para jugar', 'jugar') === 'confirmed',
+    'el umbral de gaming para procesadores no cambia'
+);
+comprobar(clasificacion($reloj, 'algo para programar', 'programar', false) === 'excluded', 'sin categoría pedida, un smartwatch no entra en una búsqueda de programación');
+comprobar(clasificacion($portatilAsus, 'algo para programar', 'programar', false) === 'confirmed', 'sin categoría pedida, un portátil sí entra en una búsqueda de programación');
 
 // ---------------------------------------------------------------------------
 // Señal de texto
