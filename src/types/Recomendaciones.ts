@@ -6,15 +6,17 @@ export interface SolicitudRecomendaciones {
   presupuesto: number;
 }
 
-/** El endpoint construye este texto en PHP a partir de evidencias del producto. */
+/** Motivo basado en los datos verificados del producto (redactado por PHP o por el modelo y validado por PHP). */
 export type MotivoRecomendacion = string;
 
 export interface ProductoRecomendado {
   producto: Producto;
   reason: MotivoRecomendacion;
+  /** Quién redactó el motivo: el modelo local (verificado por PHP) o PHP. */
+  source?: 'ollama' | 'php';
 }
 
-/** Producto relevante para la consulta cuya idoneidad todavía no está confirmada. */
+/** Producto que podría servir: cumple parte de los criterios o le faltan datos. */
 export type ProductoCandidato = ProductoRecomendado;
 
 export type MensajeSinRecomendaciones =

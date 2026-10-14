@@ -317,7 +317,7 @@ function RecommendationForm() {
 
           {respuesta && respuesta.recommendations.length > 0 && (
             <section className="recommendation-results" aria-labelledby="recommendation-results-title">
-              <h3 id="recommendation-results-title">Recomendaciones confirmadas</h3>
+              <h3 id="recommendation-results-title">Recomendado para ti</h3>
               <ul className="recommendation-product-list">
                 {respuesta.recommendations.map((recomendacion) => (
                   <TarjetaProductoRecomendado
@@ -331,9 +331,9 @@ function RecommendationForm() {
 
           {respuesta && respuesta.candidates.length > 0 && (
             <section className="recommendation-results" aria-labelledby="recommendation-candidates-title">
-              <h3 id="recommendation-candidates-title">Candidatos no confirmados</h3>
+              <h3 id="recommendation-candidates-title">Podrían servirte</h3>
               <p className="recommendation-feedback">
-                Estos productos pueden estar relacionados con tu búsqueda, pero la información disponible no permite confirmar su idoneidad.
+                Cumplen parte de lo que buscas o les faltan datos para confirmarlo. En cada uno te indicamos qué cumple y qué no.
               </p>
               <ul className="recommendation-product-list">
                 {respuesta.candidates.map((candidato) => (
