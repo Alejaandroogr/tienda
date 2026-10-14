@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once '../config/database.php';
 require_once '../config/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -23,9 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-iniciarSesion();
+// Datos actuales de la BD: un cambio de rol o un borrado se refleja sin nuevo login.
+$usuario = refrescarUsuarioSesion($pdo);
 
-if (!isset($_SESSION['usuario_id'])) {
+if ($usuario === null) {
     http_response_code(401);
 
     echo json_encode([
@@ -38,10 +40,5 @@ if (!isset($_SESSION['usuario_id'])) {
 
 echo json_encode([
     'autenticado' => true,
-    'usuario' => [
-        'id' => $_SESSION['usuario_id'],
-        'nombre' => $_SESSION['usuario_nombre'],
-        'email' => $_SESSION['usuario_email'],
-        'rol' => $_SESSION['usuario_rol']
-    ]
+    'usuario' => $usuario
 ]);
