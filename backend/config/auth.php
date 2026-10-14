@@ -4,9 +4,28 @@ require_once __DIR__ . '/errores.php';
 
 function iniciarSesion(): void
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+    if (session_status() !== PHP_SESSION_NONE) {
+        return;
     }
+
+    // Rechaza identificadores de sesión que no haya creado el servidor (fijación de sesión).
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+
+    $https = !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+
+    // HttpOnly: JavaScript no puede leer la cookie. SameSite=Lax: no se envía en
+    // peticiones originadas en otros sitios. El frontend (localhost:5173) y la API
+    // (localhost) son el mismo sitio, así que la sesión sigue funcionando.
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => $https,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+
+    session_start();
 }
 
 function cerrarSesionActual(): void
@@ -16,15 +35,15 @@ function cerrarSesionActual(): void
     if (ini_get('session.use_cookies')) {
         $parametros = session_get_cookie_params();
 
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $parametros['path'],
-            $parametros['domain'],
-            $parametros['secure'],
-            $parametros['httponly']
-        );
+        // Mismos atributos que la cookie de sesión, para que el navegador la sustituya.
+        setcookie(session_name(), '', [
+            'expires' => time() - 42000,
+            'path' => $parametros['path'],
+            'domain' => $parametros['domain'],
+            'secure' => $parametros['secure'],
+            'httponly' => $parametros['httponly'],
+            'samesite' => $parametros['samesite'],
+        ]);
     }
 
     session_destroy();
