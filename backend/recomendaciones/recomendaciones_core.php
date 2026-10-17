@@ -13,6 +13,43 @@ final class ErrorRespuestaModeloRecomendaciones extends RuntimeException
 }
 
 require_once __DIR__ . '/recomendaciones_usos.php';
+require_once __DIR__ . '/../productos/perfil_recomendacion.php';
+
+/**
+ * Atributos válidos del perfil según el mismo esquema que valida el panel de
+ * administración. MariaDB solo garantiza que el JSON es un objeto, así que se
+ * descartan las claves desconocidas para la categoría y los valores que no pasen
+ * la validación, en lugar de rechazar el producto entero.
+ *
+ * @return array<string, mixed>
+ */
+function sanitizarPerfilCategoriaRecomendaciones(string $categoria, array $atributos): array
+{
+    try {
+        $esquema = esquemaPerfilPorCategoria($categoria)['atributos'];
+    } catch (ErrorPerfilRecomendacion) {
+        return [];
+    }
+
+    $limpios = [];
+    foreach ($atributos as $clave => $valor) {
+        if (!is_string($clave) || !isset($esquema[$clave]) || $valor === null) {
+            continue;
+        }
+
+        try {
+            $valido = validarValorAtributoPerfilRecomendacion($clave, $valor, $esquema[$clave]);
+        } catch (ErrorPerfilRecomendacion) {
+            continue;
+        }
+
+        if ($valido !== null) {
+            $limpios[$clave] = $valido;
+        }
+    }
+
+    return $limpios;
+}
 
 const RECOMENDACIONES_MAX_POR_NIVEL = 3;
 

@@ -18,11 +18,13 @@ export interface AtributosPortatil {
   autonomia_h?: number;
   pantalla_pulgadas?: number;
   pantalla_hz?: number;
+  almacenamiento_gb?: number;
 }
 
 export interface AtributosTarjetaGrafica {
   vram_gb?: number;
   rendimiento_gaming?: NivelRendimiento;
+  fabricante?: 'nvidia' | 'amd' | 'intel';
 }
 
 export interface AtributosProcesador {
@@ -37,6 +39,8 @@ export interface AtributosMovil {
   autonomia_h?: number;
   resistencia_ip?: string;
   peso_g?: number;
+  camara_principal_mp?: number;
+  pantalla_hz?: number;
 }
 
 export interface AtributosAuriculares {
@@ -48,6 +52,7 @@ export interface AtributosAuriculares {
   microfono?: boolean;
   peso_g?: number;
   latencia_ms?: number;
+  cancelacion_ruido?: boolean;
 }
 
 export interface AtributosSmartwatch {
@@ -55,6 +60,7 @@ export interface AtributosSmartwatch {
   resistencia_agua_atm?: number;
   gps?: boolean;
   compatibilidad?: Array<'ios' | 'android'>;
+  sensores?: Array<'frecuencia_cardiaca' | 'spo2' | 'ecg' | 'sueno' | 'temperatura'>;
 }
 
 export interface AtributosTelevisor {
@@ -62,6 +68,7 @@ export interface AtributosTelevisor {
   resolucion?: 'HD' | 'Full HD' | '4K' | '8K';
   pantalla_hz?: number;
   funciones_gaming?: Array<'ALLM' | 'VRR'>;
+  hdr?: Array<'HDR10' | 'HDR10+' | 'Dolby Vision' | 'HLG'>;
 }
 
 export type AtributosPerfil =

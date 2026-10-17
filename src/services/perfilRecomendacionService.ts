@@ -28,10 +28,16 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
     { clave: 'autonomia_h', etiqueta: 'Autonomía', tipo: 'numero', paso: 0.1, unidad: 'h', maximo: 1000 },
     { clave: 'pantalla_pulgadas', etiqueta: 'Tamaño de pantalla', tipo: 'numero', paso: 0.1, unidad: 'pulgadas', maximo: 200 },
     { clave: 'pantalla_hz', etiqueta: 'Frecuencia de pantalla', tipo: 'numero', unidad: 'Hz', maximo: 1000 },
+    { clave: 'almacenamiento_gb', etiqueta: 'Almacenamiento', tipo: 'numero', unidad: 'GB', maximo: 100000 },
   ],
   'tarjetas graficas': [
     { clave: 'vram_gb', etiqueta: 'VRAM', tipo: 'numero', unidad: 'GB', maximo: 512 },
     { clave: 'rendimiento_gaming', etiqueta: 'Rendimiento gaming', tipo: 'enum', opciones: nivelesRendimiento },
+    { clave: 'fabricante', etiqueta: 'Fabricante de la GPU', tipo: 'enum', opciones: [
+      { valor: 'nvidia', etiqueta: 'NVIDIA' },
+      { valor: 'amd', etiqueta: 'AMD' },
+      { valor: 'intel', etiqueta: 'Intel' },
+    ] },
   ],
   procesadores: [
     { clave: 'nucleos', etiqueta: 'Núcleos', tipo: 'numero', maximo: 1024, entero: true },
@@ -44,6 +50,8 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
     { clave: 'autonomia_h', etiqueta: 'Autonomía', tipo: 'numero', paso: 0.1, unidad: 'h', maximo: 1000 },
     { clave: 'resistencia_ip', etiqueta: 'Resistencia IP', tipo: 'texto', placeholder: 'IP68 o IPX4' },
     { clave: 'peso_g', etiqueta: 'Peso', tipo: 'numero', paso: 0.1, unidad: 'g', maximo: 10000 },
+    { clave: 'camara_principal_mp', etiqueta: 'Cámara principal', tipo: 'numero', paso: 0.1, unidad: 'MP', maximo: 1000 },
+    { clave: 'pantalla_hz', etiqueta: 'Frecuencia de pantalla', tipo: 'numero', unidad: 'Hz', maximo: 1000 },
   ],
   auriculares: [
     { clave: 'conexion', etiqueta: 'Conexión', tipo: 'lista', opciones: opciones(['bluetooth', 'usb_inalambrico', 'jack']) },
@@ -58,18 +66,27 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
     { clave: 'microfono', etiqueta: 'Micrófono', tipo: 'booleano' },
     { clave: 'peso_g', etiqueta: 'Peso', tipo: 'numero', paso: 0.1, unidad: 'g', maximo: 10000 },
     { clave: 'latencia_ms', etiqueta: 'Latencia', tipo: 'numero', paso: 0.1, unidad: 'ms', maximo: 10000 },
+    { clave: 'cancelacion_ruido', etiqueta: 'Cancelación activa de ruido', tipo: 'booleano' },
   ],
   smartwatch: [
     { clave: 'autonomia_dias', etiqueta: 'Autonomía', tipo: 'numero', paso: 0.1, unidad: 'días', maximo: 3650 },
     { clave: 'resistencia_agua_atm', etiqueta: 'Resistencia al agua', tipo: 'numero', paso: 0.1, unidad: 'ATM', maximo: 1000 },
     { clave: 'gps', etiqueta: 'GPS', tipo: 'booleano' },
     { clave: 'compatibilidad', etiqueta: 'Compatibilidad', tipo: 'lista', opciones: opciones(['ios', 'android']) },
+    { clave: 'sensores', etiqueta: 'Sensores', tipo: 'lista', opciones: [
+      { valor: 'frecuencia_cardiaca', etiqueta: 'Frecuencia cardíaca' },
+      { valor: 'spo2', etiqueta: 'Oxígeno en sangre (SpO2)' },
+      { valor: 'ecg', etiqueta: 'Electrocardiograma (ECG)' },
+      { valor: 'sueno', etiqueta: 'Sueño' },
+      { valor: 'temperatura', etiqueta: 'Temperatura' },
+    ] },
   ],
   televisores: [
     { clave: 'pantalla_pulgadas', etiqueta: 'Tamaño de pantalla', tipo: 'numero', paso: 0.1, unidad: 'pulgadas', maximo: 200 },
     { clave: 'resolucion', etiqueta: 'Resolución', tipo: 'enum', opciones: opciones(['HD', 'Full HD', '4K', '8K']) },
     { clave: 'pantalla_hz', etiqueta: 'Frecuencia de pantalla', tipo: 'numero', unidad: 'Hz', maximo: 1000 },
     { clave: 'funciones_gaming', etiqueta: 'Funciones gaming', tipo: 'lista', opciones: opciones(['ALLM', 'VRR']) },
+    { clave: 'hdr', etiqueta: 'HDR', tipo: 'lista', opciones: opciones(['HDR10', 'HDR10+', 'Dolby Vision', 'HLG']) },
   ],
 };
 
@@ -88,15 +105,16 @@ const ETIQUETAS_USO: Record<string, string> = {
   salud: 'Salud',
   cine_streaming: 'Cine y streaming',
   deportes: 'Deportes',
+  movilidad: 'Movilidad',
 };
 
 // Debe coincidir con los usos de esquemaPerfilPorCategoria() en el backend.
 const usosPorCategoria: Record<CategoriaPerfil, readonly string[]> = {
-  portatiles: ['gaming', 'programacion', 'trabajo', 'edicion'],
+  portatiles: ['gaming', 'programacion', 'trabajo', 'edicion', 'movilidad'],
   'tarjetas graficas': ['gaming', 'edicion', 'creacion_3d', 'ia'],
   procesadores: ['gaming', 'programacion', 'trabajo', 'edicion'],
   moviles: ['fotografia', 'gaming', 'trabajo', 'viajes'],
-  auriculares: ['gimnasio', 'gaming', 'trabajo', 'musica'],
+  auriculares: ['gimnasio', 'gaming', 'trabajo', 'musica', 'viajes'],
   smartwatch: ['gimnasio', 'deporte', 'salud', 'trabajo'],
   televisores: ['gaming', 'cine_streaming', 'deportes'],
 };
