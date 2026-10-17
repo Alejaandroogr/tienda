@@ -5,7 +5,7 @@ $fase = $argv[1] ?? 'hoy';
 const NEUTRO = 'uso personal';
 // IDs: 1 ASUS · 2 RTX 5070 · 3 Ryzen 9700X · 4 iPhone 18 Pro Max · 5 iPhone 17 · 6 MacBook Air M5
 //      7 AirPods Pro 3 · 8 Logitech G Pro X · 9 Watch Ultra 3 · 10 Huawei Fit 5 Pro · 11 TV Samsung
-// Expectativa: ['rec' => [ids]] (como conjunto), ['disp' => [ids]], ['msg' => 'fragmento'], o lista de alternativas.
+// Expectativa: ['rec' => [ids]] (como conjunto), ['orden' => [ids]] (orden exacto), ['disp' => [ids]], ['msg' => 'fragmento'], o lista de alternativas.
 $SIN = 'No hay productos que cumplan todo lo que pides';
 $IRREC = 'No hemos entendido qué buscas';
 $casos = [
@@ -53,7 +53,9 @@ $casos = [
   42 => ['televisor para ver Netflix', NEUTRO, 2000, ['msg' => $SIN]],
   43 => ['tele para ver el fútbol', NEUTRO, 2000, ['msg' => $SIN]],
   44 => ['tv 4K de 65 pulgadas', NEUTRO, 2000, ['msg' => $SIN]],
-  45 => ['algo para jugar', NEUTRO, 2000, ['rec' => [1, 8, 2]]],
+  // Sin categoría: el mejor de cada categoría, en el orden del catálogo (portátiles, gráficas,
+  // procesadores, auriculares, móviles...). El Ryzen no tiene stock y la TV no cumple.
+  45 => ['algo para jugar', NEUTRO, 2000, ['orden' => [1, 2, 8, 5]]],
   46 => ['un ratón inalámbrico', NEUTRO, 2000, ['msg' => 'No tenemos ese tipo de producto']],
   47 => ['hola', NEUTRO, 2000, ['msg' => $IRREC]],
   48 => ['quiero algo bonito', NEUTRO, 2000, ['msg' => $IRREC]],
@@ -76,6 +78,7 @@ function cumple(array $e, array $d): bool {
   $rec = array_column(array_column($d['recommendations'] ?? [], 'producto'), 'id');
   $disp = array_column($d['available']['productos'] ?? [], 'id');
   $msg = (string) ($d['message'] ?? '');
+  if (isset($e['orden'])) return $rec === $e['orden']; // orden exacto
   if (isset($e['rec'])) { $a = $rec; $b = $e['rec']; sort($a); sort($b); return $a === $b; }
   if (isset($e['disp'])) return $rec === [] && $disp === $e['disp'];
   if (isset($e['msg_exacto'])) return $rec === [] && $disp === [] && $msg === $e['msg_exacto'];

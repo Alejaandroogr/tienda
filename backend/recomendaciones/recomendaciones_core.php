@@ -596,6 +596,32 @@ function agruparPorNivelRecomendaciones(array $evaluados, int $maximoPorNivel = 
 }
 
 /**
+ * Para consultas sin categoría: como máximo el mejor recomendado de cada
+ * categoría (puntuación, precio e id, comparados solo dentro de la categoría),
+ * con las categorías en el orden del catálogo. Las puntuaciones de categorías
+ * distintas no se comparan porque sus criterios no son equivalentes.
+ *
+ * @param list<array{id:int, precio:string, categoria:string, classification:string, puntuacion:float}> $evaluados
+ * @return array{confirmed:list<array>, candidate:list<array>}
+ */
+function agruparPorCategoriaRecomendaciones(array $evaluados): array
+{
+    $ordenCatalogo = array_flip(array_keys(catalogoUsosRecomendaciones()));
+    $mejores = [];
+
+    foreach (agruparPorNivelRecomendaciones($evaluados, PHP_INT_MAX)['confirmed'] as $evaluado) {
+        $categoria = normalizarTextoIdoneidadRecomendaciones($evaluado['categoria']);
+        // La lista ya viene ordenada por puntuación, precio e id: el primero de cada categoría es el mejor.
+        $mejores[$categoria] ??= $evaluado;
+    }
+
+    uksort($mejores, static fn (string $a, string $b): int =>
+        [$ordenCatalogo[$a] ?? PHP_INT_MAX, $a] <=> [$ordenCatalogo[$b] ?? PHP_INT_MAX, $b]);
+
+    return ['confirmed' => array_values($mejores), 'candidate' => []];
+}
+
+/**
  * Valida la respuesta de Ollama: solo puede reordenar los productos recibidos y
  * redactar explicaciones. Devuelve [id => explicación|null] en el orden propuesto;
  * una explicación que menciona datos no verificados se sustituye por null.
@@ -693,7 +719,9 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
     $valoracionesNoVerificables = [
         'diseno', 'precio', 'barato', 'barata', 'caro', 'cara', 'calidad', 'comodo', 'comoda', 'comodidad',
         'ideal', 'perfecto', 'perfecta', 'excelente', 'mejor', 'premium', 'potente', 'rapido', 'rapida',
-        'garantiza', 'garantizado', 'recomendable',
+        'garantiza', 'garantizado', 'recomendable', 'suficiente', 'suficientes',
+        // Atribuir una valoración a la tienda solo vale si el producto la tiene en sus datos.
+        'tienda', 'valorado', 'valorada', 'valoracion',
     ];
     foreach ($valoracionesNoVerificables as $termino) {
         if (
@@ -764,14 +792,17 @@ const RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS =
  *
  * @param array{confirmed:list<array>, candidate?:list<array>} $niveles
  * @param array<int, ?string> $explicacionesModelo [id => explicación] en el orden del modelo
+ * @param bool $respetarOrdenPhp el modelo redacta las explicaciones pero no reordena
+ *             (consultas sin categoría, ordenadas por el orden del catálogo)
  * @return array{recommendations:list<array{producto:array, reason:string, source:string}>, message?:string}
  */
 function construirRespuestaRecomendaciones(
     array $niveles,
     array $productosPorId,
-    array $explicacionesModelo = []
+    array $explicacionesModelo = [],
+    bool $respetarOrdenPhp = false
 ): array {
-    $posicionModelo = array_flip(array_keys($explicacionesModelo));
+    $posicionModelo = $respetarOrdenPhp ? [] : array_flip(array_keys($explicacionesModelo));
     $elementos = $niveles['confirmed'] ?? [];
     // El modelo solo reordena los recomendados; los no mencionados conservan el orden de PHP.
     $ordenPhp = array_flip(array_column($elementos, 'id'));

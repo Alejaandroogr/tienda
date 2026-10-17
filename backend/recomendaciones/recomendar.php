@@ -736,12 +736,16 @@ foreach ($dentro as $producto) {
     }
 }
 
-$niveles = agruparPorNivelRecomendaciones($evaluados);
+// Sin categoría pedida, las puntuaciones de categorías distintas no son comparables:
+// como máximo el mejor de cada categoría, en el orden del catálogo.
+$niveles = $categoriaSolicitada
+    ? agruparPorNivelRecomendaciones($evaluados)
+    : agruparPorCategoriaRecomendaciones($evaluados);
 
 if ($niveles['confirmed'] !== []) {
     $explicacionesModelo = solicitarOrdenModeloRecomendaciones($niveles, $consulta, $uso);
     responderResultadoRecomendaciones(
-        construirRespuestaRecomendaciones($niveles, $productosPublicos, $explicacionesModelo),
+        construirRespuestaRecomendaciones($niveles, $productosPublicos, $explicacionesModelo, !$categoriaSolicitada),
         $deteccion,
         $avisos
     );
