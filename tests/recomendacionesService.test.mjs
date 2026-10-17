@@ -237,3 +237,21 @@ test('envía la solicitud con el uso vacío sin rechazarla', async () => {
     globalThis.fetch = fetchOriginal;
   }
 });
+
+test('envía la solicitud sin presupuesto cuando no se indica', async () => {
+  const fetchOriginal = globalThis.fetch;
+  let cuerpoEnviado;
+  globalThis.fetch = async (_url, opciones) => {
+    cuerpoEnviado = JSON.parse(opciones.body);
+    return new Response(JSON.stringify({ recommendations: [{ producto, reason: 'Cumple los criterios para jugar.' }] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  try {
+    await solicitarRecomendaciones({ consulta: 'portátil gaming', uso: '' });
+    assert.equal('presupuesto' in cuerpoEnviado, false);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+  }
+});

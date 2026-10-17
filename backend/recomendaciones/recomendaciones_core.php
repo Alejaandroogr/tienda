@@ -76,9 +76,10 @@ function precioCentimosRecomendaciones(mixed $precio): ?int
     return ($euros * 100) + $centimos;
 }
 
+/** @param int|null $presupuestoCentimos null: sin límite de precio (presupuesto no indicado) */
 function candidatoCumpleFiltrosDurosRecomendaciones(
     array $producto,
-    int $presupuestoCentimos,
+    ?int $presupuestoCentimos,
     array $categoriaIds
 ): bool {
     $precioCentimos = precioCentimosRecomendaciones($producto['precio'] ?? null);
@@ -86,7 +87,7 @@ function candidatoCumpleFiltrosDurosRecomendaciones(
     $categoriaId = $producto['categoria_id'] ?? null;
 
     return $precioCentimos !== null &&
-        $precioCentimos <= $presupuestoCentimos &&
+        ($presupuestoCentimos === null || $precioCentimos <= $presupuestoCentimos) &&
         is_int($stock) && $stock > 0 &&
         is_int($categoriaId) &&
         ($categoriaIds === [] || in_array($categoriaId, $categoriaIds, true));
@@ -785,6 +786,10 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
 
 const RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS =
     'No hay productos que cumplan todo lo que pides. Prueba a ampliar el presupuesto o cambiar la búsqueda.';
+
+/** Sin presupuesto indicado no tiene sentido sugerir que se amplíe. */
+const RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS_SIN_PRESUPUESTO =
+    'No hay productos que cumplan todo lo que pides. Prueba a cambiar la búsqueda.';
 
 /**
  * Forma la respuesta pública. Solo incluye los productos recomendados: los demás

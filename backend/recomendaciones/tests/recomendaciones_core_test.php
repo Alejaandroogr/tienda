@@ -101,6 +101,12 @@ foreach (['stock' => 0, 'precio' => '1000.01', 'categoria_id' => 8] as $campo =>
 }
 comprobar(!candidatoCumpleFiltrosDurosRecomendaciones(array_replace($portatilAsus, ['precio' => 899.99]), 100000, [4]), 'precio no textual se rechaza');
 
+// Presupuesto opcional: null significa sin límite de precio; stock y categoría se siguen aplicando.
+comprobar(candidatoCumpleFiltrosDurosRecomendaciones(array_replace($portatilMac, ['precio' => '9999999.99']), null, [4]), 'sin presupuesto no hay límite de precio');
+comprobar(!candidatoCumpleFiltrosDurosRecomendaciones(array_replace($portatilMac, ['stock' => 0]), null, [4]), 'sin presupuesto se sigue exigiendo stock');
+comprobar(!candidatoCumpleFiltrosDurosRecomendaciones($portatilMac, null, [8]), 'sin presupuesto se sigue filtrando por categoría');
+comprobar(!str_contains(RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS_SIN_PRESUPUESTO, 'presupuesto'), 'sin presupuesto el mensaje no habla de presupuesto');
+
 // ---------------------------------------------------------------------------
 // Portátiles para gaming: GPU dedicada, RAM >= 16 GB, pantalla >= 120 Hz
 // ---------------------------------------------------------------------------
