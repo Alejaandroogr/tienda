@@ -309,26 +309,33 @@ if (
     );
 }
 
-if (!is_int($presupuesto) && !is_float($presupuesto)) {
-    errorRecomendaciones(
-        400,
-        'invalid_budget',
-        'Indica un presupuesto numérico válido'
-    );
+// El presupuesto es opcional: ausente, null o "" significa sin límite de precio.
+// Cualquier otro valor debe ser válido (positivo, como máximo dos decimales…).
+$presupuestoEnCentimos = null;
+$presupuestoEuros = null;
+
+if ($presupuesto !== null && !(is_string($presupuesto) && trim($presupuesto) === '')) {
+    if (!is_int($presupuesto) && !is_float($presupuesto)) {
+        errorRecomendaciones(
+            400,
+            'invalid_budget',
+            'Indica un presupuesto numérico válido'
+        );
+    }
+
+    $presupuestoEnCentimos = presupuestoEnCentimosRecomendaciones($cuerpo, $presupuesto);
+
+    if ($presupuestoEnCentimos === null) {
+        errorRecomendaciones(
+            400,
+            'invalid_budget',
+            'El presupuesto debe ser positivo, no superar 10 000 000 € y tener como máximo dos decimales'
+        );
+    }
+
+    $presupuestoEuros = intdiv($presupuestoEnCentimos, 100) . '.' .
+        str_pad((string) ($presupuestoEnCentimos % 100), 2, '0', STR_PAD_LEFT);
 }
-
-$presupuestoEnCentimos = presupuestoEnCentimosRecomendaciones($cuerpo, $presupuesto);
-
-if ($presupuestoEnCentimos === null) {
-    errorRecomendaciones(
-        400,
-        'invalid_budget',
-        'El presupuesto debe ser positivo, no superar 10 000 000 € y tener como máximo dos decimales'
-    );
-}
-
-$presupuestoEuros = intdiv($presupuestoEnCentimos, 100) . '.' .
-    str_pad((string) ($presupuestoEnCentimos % 100), 2, '0', STR_PAD_LEFT);
 $databaseFailureMode = 'exception';
 $textoSolicitud = normalizarTextoIdoneidadRecomendaciones($consulta . ' ' . $uso);
 
@@ -795,12 +802,13 @@ if ($enStock === []) {
             $usosDelProducto
         ));
 
-    if ($masBaratoQueCumple !== null && !$masBaratoQueCumple['dentro']) {
+    // Los mensajes de presupuesto insuficiente solo tienen sentido si se indicó presupuesto.
+    if ($presupuestoEuros !== null && $masBaratoQueCumple !== null && !$masBaratoQueCumple['dentro']) {
         $mensaje = mensajeMasBaratoQueCumpleRecomendaciones($presupuestoEuros, $etiquetaUsos, [
             'nombre' => $masBaratoQueCumple['candidato']['nombre'],
             'precio' => $masBaratoQueCumple['candidato']['precio'],
         ]);
-    } elseif ($dentro === []) {
+    } elseif ($presupuestoEuros !== null && $dentro === []) {
         $masBarato = $porPrecio($enStock)[0];
         $mensaje = mensajeSinProductosEnPresupuestoRecomendaciones($nombresCategorias, $presupuestoEuros, [
             'nombre' => $masBarato['candidato']['nombre'],
@@ -812,7 +820,9 @@ if ($enStock === []) {
             $deteccion['usos']
         ));
     } else {
-        $mensaje = RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS;
+        $mensaje = $presupuestoEuros === null
+            ? RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS_SIN_PRESUPUESTO
+            : RECOMENDACIONES_MENSAJE_SIN_RECOMENDADOS;
     }
 }
 

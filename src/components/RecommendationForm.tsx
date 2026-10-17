@@ -164,13 +164,19 @@ function RecommendationForm() {
     }
 
     const valorPresupuesto = presupuestoInput.valueAsNumber;
+    // Presupuesto opcional: vacío significa sin límite. Un texto no numérico también deja
+    // value === '', pero el navegador lo marca como badInput y debe seguir dando error.
+    const sinPresupuesto = presupuestoInput.value === '' && !presupuestoInput.validity.badInput;
 
     if (
-      !presupuestoInput.validity.valid ||
-      !Number.isFinite(valorPresupuesto) ||
-      valorPresupuesto <= 0 ||
-      valorPresupuesto > PRESUPUESTO_MAXIMO ||
-      Math.abs(valorPresupuesto * 100 - Math.round(valorPresupuesto * 100)) > 1e-7
+      !sinPresupuesto &&
+      (
+        !presupuestoInput.validity.valid ||
+        !Number.isFinite(valorPresupuesto) ||
+        valorPresupuesto <= 0 ||
+        valorPresupuesto > PRESUPUESTO_MAXIMO ||
+        Math.abs(valorPresupuesto * 100 - Math.round(valorPresupuesto * 100)) > 1e-7
+      )
     ) {
       setError('Indica un presupuesto mayor que 0, con hasta dos decimales y no superior a 10 000 000 €.');
       setRespuesta(null);
@@ -181,7 +187,7 @@ function RecommendationForm() {
     const solicitud: SolicitudRecomendaciones = {
       consulta: consultaLimpia,
       uso: usoLimpio,
-      presupuesto: valorPresupuesto,
+      ...(sinPresupuesto ? {} : { presupuesto: valorPresupuesto }),
     };
 
     envioEnCursoRef.current = true;
@@ -213,7 +219,7 @@ function RecommendationForm() {
             Encuentra lo que necesitas
           </CardTitle>
           <CardDescription>
-            Cuéntanos qué buscas y cuánto quieres invertir; si quieres, dinos también para qué lo usarás.
+            Cuéntanos qué buscas; si quieres, dinos también para qué lo usarás y cuánto quieres invertir.
             Te sugeriremos opciones disponibles del catálogo.
           </CardDescription>
         </CardHeader>
@@ -226,7 +232,7 @@ function RecommendationForm() {
             aria-describedby="recommendation-help"
           >
             <p id="recommendation-help" className="recommendation-help">
-              El presupuesto admite hasta dos decimales. Las sugerencias son orientativas.
+              El presupuesto es opcional y admite hasta dos decimales. Las sugerencias son orientativas.
             </p>
 
             <div className="recommendation-field recommendation-field-full">
@@ -266,19 +272,18 @@ function RecommendationForm() {
             </div>
 
             <div className="recommendation-field recommendation-budget-field">
-              <label htmlFor="recommendation-budget">Presupuesto máximo (€)</label>
+              <label htmlFor="recommendation-budget">Presupuesto máximo (€) (opcional)</label>
               <Input
                 id="recommendation-budget"
                 name="presupuesto"
                 type="number"
                 value={presupuesto}
                 onChange={(evento) => setPresupuesto(evento.target.value)}
-                placeholder="Por ejemplo, 1200"
+                placeholder="Sin límite"
                 min="0.01"
                 max={PRESUPUESTO_MAXIMO}
                 step="0.01"
                 inputMode="decimal"
-                required
                 disabled={cargando}
               />
             </div>

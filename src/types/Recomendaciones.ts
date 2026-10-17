@@ -3,7 +3,8 @@ import type { Producto } from './Producto';
 export interface SolicitudRecomendaciones {
   consulta: string;
   uso: string;
-  presupuesto: number;
+  /** Opcional: sin presupuesto no se limita el precio. */
+  presupuesto?: number;
 }
 
 /** Motivo basado en los datos verificados del producto (redactado por PHP o por el modelo y validado por PHP). */
