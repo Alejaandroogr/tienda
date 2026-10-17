@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { ArrowUpRight, Cpu, LoaderCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ErrorRecomendaciones, solicitarRecomendaciones } from '../services/recomendacionesService';
+import type { Producto } from '../types/Producto';
 import type {
   RespuestaRecomendaciones,
   SolicitudRecomendaciones,
@@ -65,7 +66,11 @@ function formatearPrecio(precio: string): string {
 function TarjetaProductoRecomendado({
   producto,
   reason,
-}: RespuestaRecomendaciones['recommendations'][number]) {
+}: {
+  producto: Producto;
+  /** Sin motivo en la lista «Disponibles»: esos productos no son recomendaciones. */
+  reason?: string;
+}) {
   const [imagenNoDisponible, setImagenNoDisponible] = useState(false);
   const rutaProducto = `/productos/${producto.id}`;
 
@@ -103,7 +108,7 @@ function TarjetaProductoRecomendado({
           <strong className="recommendation-product-price">
             {formatearPrecio(producto.precio)}
           </strong>
-          <p className="recommendation-product-reason">{reason}</p>
+          {reason && <p className="recommendation-product-reason">{reason}</p>}
           <Button
             className="recommendation-product-action"
             render={<Link to={rutaProducto} />}
@@ -307,10 +312,27 @@ function RecommendationForm() {
             </p>
           )}
 
+          {respuesta?.notices?.map((aviso) => (
+            <p key={aviso} className="recommendation-feedback" role="status">
+              {aviso}
+            </p>
+          ))}
+
           {respuesta && respuesta.recommendations.length === 0 && (
             <p className="recommendation-feedback" role="status" aria-live="polite">
               {respuesta.message}
             </p>
+          )}
+
+          {respuesta?.available && (
+            <section className="recommendation-results" aria-labelledby="recommendation-available-title">
+              <h3 id="recommendation-available-title">Disponibles en {respuesta.available.categoria}</h3>
+              <ul className="recommendation-product-list">
+                {respuesta.available.productos.map((producto) => (
+                  <TarjetaProductoRecomendado key={producto.id} producto={producto} />
+                ))}
+              </ul>
+            </section>
           )}
 
           {respuesta && respuesta.recommendations.length > 0 && (

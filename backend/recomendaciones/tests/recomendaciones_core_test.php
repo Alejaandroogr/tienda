@@ -196,11 +196,11 @@ comprobar(
 );
 
 // Requisito explícito de micrófono fuera del uso gaming.
-$conMicrofono = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares con micrófono', 'llamadas', true);
+$conMicrofono = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares con micrófono', 'uso diario', true);
 comprobar($conMicrofono['classification'] === 'confirmed', 'sin uso concreto, la característica pedida y confirmada recomienda (antes: podría servir)');
 comprobar($conMicrofono['reason'] === 'Cumple lo que pides: micrófono.', 'motivo confirma el micrófono pedido');
 comprobar(
-    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['conexion' => ['bluetooth']]]), 'auriculares con micrófono', 'llamadas') === 'candidate',
+    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['conexion' => ['bluetooth']]]), 'auriculares con micrófono', 'uso diario') === 'candidate',
     'característica pedida sin dato no recomienda'
 );
 comprobar(
@@ -211,7 +211,7 @@ comprobar(clasificacion($portatilAsus, 'portátil con GPU dedicada', 'trabajo di
 comprobar(clasificacion($portatilMac, 'portátil con GPU dedicada', 'trabajo diario') === 'excluded', 'GPU dedicada pedida y contradicha excluye');
 comprobar(clasificacion($portatilAsus, 'portátil ligero', 'trabajo diario') === 'candidate', 'sin uso ni característica pedida no se recomienda');
 comprobar(
-    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['microfono' => false]]), 'auriculares con micrófono', 'llamadas') === 'excluded',
+    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['microfono' => false]]), 'auriculares con micrófono', 'uso diario') === 'excluded',
     'micrófono pedido y ausente excluye'
 );
 
@@ -245,20 +245,22 @@ comprobar(
 // M1: los usos negados no cuentan como intención
 // ---------------------------------------------------------------------------
 
-$intenciones = [
-    'portátil para programar, no para juegos' => 'programacion',
-    'auriculares para el gimnasio, no para jugar' => 'gimnasio',
-    'portátil sin jugar, solo para programar' => 'programacion',
-    'no lo quiero para jugar' => null,
-    'portátil para jugar' => 'gaming',
-    'portátil para programar y jugar' => 'gaming',
-    'tele para la consola' => 'gaming',
-    'auriculares para la PS5' => 'gaming',
+// La detección de usos sustituye a la antigua intención única: ahora depende de
+// la categoría y admite hasta dos usos en el orden en que aparecen.
+$usosEsperados = [
+    ['portátil para programar, no para juegos', 'portatiles', ['programacion']],
+    ['auriculares para el gimnasio, no para jugar', 'auriculares', ['gimnasio']],
+    ['portátil sin jugar, solo para programar', 'portatiles', ['programacion']],
+    ['no lo quiero para jugar', 'portatiles', []],
+    ['portátil para jugar', 'portatiles', ['gaming']],
+    ['portátil para programar y jugar', 'portatiles', ['programacion', 'gaming']],
+    ['tele para la consola', 'televisores', ['gaming']],
+    ['auriculares para la PS5', 'auriculares', ['gaming']],
 ];
-foreach ($intenciones as $texto => $esperada) {
+foreach ($usosEsperados as [$texto, $categoriaUso, $esperados]) {
     comprobar(
-        detectarIntencionTecnicaRecomendaciones(normalizarTextoIdoneidadRecomendaciones($texto)) === $esperada,
-        'intención de: ' . $texto
+        detectarUsosCategoriaRecomendaciones(normalizarTextoIdoneidadRecomendaciones($texto), $categoriaUso) === $esperados,
+        'usos de: ' . $texto
     );
 }
 comprobar(
@@ -305,7 +307,7 @@ comprobar(
 $reloj = ['categoria' => 'Smartwatch', 'nombre' => 'Watch', 'especificaciones' => ['gps' => true]];
 comprobar(clasificacion($reloj, 'algo para jugar', 'jugar', false) === 'excluded', 'smartwatch no entra en una búsqueda gaming sin categoría');
 comprobar(clasificacion($grafica, 'algo para jugar', 'jugar', false) === 'confirmed', 'gráfica sí entra en una búsqueda gaming sin categoría');
-comprobar(clasificacion($reloj, 'smartwatch', 'diario', true) === 'candidate', 'con categoría pedida y sin uso reconocido, el producto puede servir');
+comprobar(clasificacion($reloj, 'smartwatch', 'diario', true) === 'unknown', 'con categoría pedida y sin uso reconocido, va a la lista «Disponibles» (antes: podría servir)');
 
 // Programación (opción A): portátiles con RAM >= 16 GB; la autonomía solo ordena.
 $portatilMacConAutonomia = array_replace_recursive($portatilMac, ['especificaciones' => ['autonomia_h' => 18]]);

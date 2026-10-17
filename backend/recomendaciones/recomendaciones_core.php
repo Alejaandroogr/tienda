@@ -12,6 +12,8 @@ final class ErrorRespuestaModeloRecomendaciones extends RuntimeException
     }
 }
 
+require_once __DIR__ . '/recomendaciones_usos.php';
+
 const RECOMENDACIONES_MAX_POR_NIVEL = 3;
 
 function precioCentimosRecomendaciones(mixed $precio): ?int
@@ -87,28 +89,6 @@ function solicitudExigeGpuDedicadaRecomendaciones(string $textoNormalizado): boo
     return preg_match('/\b(?:con\s+(?:una\s+)?)?(?:gpu|grafica|tarjeta\s+grafica)\s+dedicada\b/', $textoNormalizado) === 1;
 }
 
-function detectarIntencionTecnicaRecomendaciones(string $textoNormalizado): ?string
-{
-    $intenciones = [
-        'gaming' => [
-            'gaming', 'gamer', 'juego', 'juegos', 'jugar', 'videojuego', 'videojuegos',
-            'consola', 'consolas', 'ps5', 'playstation', 'xbox',
-        ],
-        'programacion' => ['programacion', 'programar', 'programador', 'desarrollo', 'desarrollar', 'codigo'],
-        'gimnasio' => ['gym', 'gimnasio', 'entrenamiento', 'entrenar', 'ejercicio'],
-    ];
-    $textoConLimites = ' ' . eliminarUsosNegadosRecomendaciones($textoNormalizado) . ' ';
-
-    foreach ($intenciones as $intencion => $terminos) {
-        foreach ($terminos as $termino) {
-            if (strpos($textoConLimites, ' ' . $termino . ' ') !== false) {
-                return $intencion;
-            }
-        }
-    }
-
-    return null;
-}
 
 /** @return 'affirmative'|'negated'|'ambiguous' */
 function solicitudNecesitaComunicacionVozRecomendaciones(string $texto): string
@@ -218,15 +198,6 @@ function describirEspecificacionRecomendaciones(string $clave, mixed $valor): ?s
 
     $unidad = $unidades[$clave] ?? '';
     return $etiquetas[$clave] . ': ' . $valorTexto . ($unidad === '' ? '' : ' ' . $unidad);
-}
-
-function etiquetaIntencionRecomendaciones(string $intencion): string
-{
-    return [
-        'gaming' => 'jugar',
-        'programacion' => 'programar',
-        'gimnasio' => 'el gimnasio',
-    ][$intencion] ?? $intencion;
 }
 
 /** Valor descrito sin su etiqueta («16 GB» en lugar de «RAM: 16 GB»). */
@@ -396,172 +367,168 @@ function clavesPertinentesIntencionRecomendaciones(string $categoria, ?string $i
 /**
  * Evalúa un producto que ya cumple presupuesto, stock y categoría.
  *
- * - confirmed (recomendado): cumple todos los criterios aprobados; o el
- *   administrador lo valoró como adecuado y ningún dato lo contradice; o, sin un
- *   uso concreto, cumple con datos confirmados todas las características que
- *   pide la consulta («auriculares con micrófono»).
- * - candidate (podría servir, uso interno): falta algún dato o no cumple algo.
- * - excluded: el administrador lo marcó como no adecuado, un dato contradice un
- *   requisito explícito de la consulta, o (sin categoría pedida) su categoría no
- *   tiene criterios para el uso.
+ * Los usos se detectan con la categoría del producto («correr» es gimnasio en
+ * auriculares y deporte en smartwatch); $usosForzados los sustituye cuando el uso
+ * lo ha clasificado Ollama.
  *
- * @return array{classification:'confirmed'|'candidate'|'excluded', puntuacion:float, reason:string, datos:list<string>}
+ * - confirmed (recomendado): cumple cada uso (todos sus criterios, o valorado
+ *   «adecuado» por el administrador sin datos en contra) y todas las
+ *   características pedidas; o, sin uso, cumple todas las características pedidas.
+ * - candidate (uso interno): falta algún dato o no cumple algún criterio.
+ * - unknown: no se reconoce uso ni característica (lista «Disponibles»).
+ * - excluded: valorado «no adecuado» para un uso pedido, un dato contradice una
+ *   característica pedida, o (sin categoría pedida) no aplica a su categoría.
+ *
+ * @param list<string>|null $usosForzados
+ * @return array{classification:'confirmed'|'candidate'|'unknown'|'excluded', puntuacion:float, reason:string, datos:list<string>, usos:list<string>}
  */
 function evaluarProductoRecomendaciones(
     array $candidato,
     string $consulta,
     string $uso,
-    bool $categoriaSolicitada
+    bool $categoriaSolicitada,
+    ?array $usosForzados = null
 ): array {
     $especificaciones = is_array($candidato['especificaciones'] ?? null) ? $candidato['especificaciones'] : [];
-    $usos = is_array($candidato['usos'] ?? null) ? $candidato['usos'] : [];
+    $valoraciones = is_array($candidato['usos'] ?? null) ? $candidato['usos'] : [];
     $categoria = normalizarTextoIdoneidadRecomendaciones((string) ($candidato['categoria'] ?? ''));
     $textoSolicitud = normalizarTextoIdoneidadRecomendaciones($consulta . ' ' . $uso);
     $textoProducto = (string) ($candidato['nombre'] ?? '') . ' ' . (string) ($candidato['descripcion'] ?? '');
-    $intencion = detectarIntencionTecnicaRecomendaciones($textoSolicitud);
     $necesidadVoz = solicitudNecesitaComunicacionVozRecomendaciones($consulta . ' ' . $uso);
-    $excluido = static fn (string $motivo): array => [
-        'classification' => 'excluded', 'puntuacion' => 0.0, 'reason' => $motivo, 'datos' => [],
+    $usosCategoria = catalogoUsosRecomendaciones()[$categoria] ?? [];
+    $usosPedidos = $usosForzados !== null
+        ? array_values(array_filter($usosForzados, static fn (string $u): bool => isset($usosCategoria[$u])))
+        : detectarUsosCategoriaRecomendaciones($textoSolicitud, $categoria);
+    $caracteristicas = detectarCaracteristicasRecomendaciones($consulta, $uso, $categoria);
+    $resultado = static fn (string $clasificacion, string $motivo, float $puntuacion = 0.0, array $datos = []): array => [
+        'classification' => $clasificacion,
+        'puntuacion' => $puntuacion,
+        'reason' => $motivo,
+        'datos' => $datos,
+        'usos' => $usosPedidos,
     ];
 
-    $valoracionTienda = $intencion !== null ? ($usos[$intencion] ?? null) : null;
-    if ($valoracionTienda === 'no_recomendado') {
-        return $excluido('La tienda lo ha valorado como no adecuado para ' . etiquetaIntencionRecomendaciones($intencion) . '.');
+    if ($usosPedidos === [] && $caracteristicas === []) {
+        return $categoriaSolicitada ? $resultado('unknown', '') : $resultado('excluded', '');
     }
 
-    // Características pedidas explícitamente: un dato en contra excluye; a favor
-    // puntúa; sin dato, no se puede confirmar.
-    $pedidas = [];
-    if ($categoria === 'portatiles' && solicitudExigeGpuDedicadaRecomendaciones($textoSolicitud)) {
-        $gpu = $especificaciones['gpu_tipo'] ?? null;
-        if ($gpu === 'integrada') {
-            return $excluido('Pides GPU dedicada y el producto tiene GPU integrada.');
-        }
-        $pedidas[] = ['cumple' => $gpu === 'dedicada' ? true : null, 'texto' => 'GPU dedicada'];
-    }
-    if ($categoria === 'auriculares' && $necesidadVoz === 'affirmative') {
-        $microfono = $especificaciones['microfono'] ?? null;
-        if ($microfono === false) {
-            return $excluido('Necesitas micrófono y el producto no tiene.');
-        }
-        $pedidas[] = ['cumple' => $microfono === true ? true : null, 'texto' => 'micrófono'];
-    }
-
-    $criterios = $intencion !== null
-        ? criteriosIntencionRecomendaciones($categoria, $intencion, $especificaciones, $textoProducto, $necesidadVoz)
-        : null;
-
-    if (!$categoriaSolicitada && $criterios === null) {
-        return $excluido('');
-    }
-
-    $cumplidos = [];
-    $incumplidos = [];
-    $desconocidos = [];
-    $puntuacion = 0.0;
-    foreach ($criterios ?? [] as $criterio) {
-        if ($criterio['cumple'] === true) {
-            $cumplidos[] = $criterio['texto'];
-            $puntuacion += 1;
-        } elseif ($criterio['cumple'] === false) {
-            $incumplidos[] = $criterio['texto'];
-            $puntuacion -= 1;
-        } else {
-            $desconocidos[] = $criterio['texto'];
+    foreach ($usosPedidos as $usoPedido) {
+        if (($valoraciones[$usoPedido] ?? null) === 'no_recomendado') {
+            return $resultado('excluded', 'La tienda lo ha valorado como no adecuado para ' . etiquetaUsoRecomendaciones($usoPedido, $categoria) . '.');
         }
     }
 
+    // Características pedidas: un dato en contra excluye; sin dato, no se puede confirmar.
     $pedidasCumplidas = [];
     $pedidasSinDato = [];
-    foreach ($pedidas as $pedida) {
-        if ($pedida['cumple'] === true) {
-            $pedidasCumplidas[] = $pedida['texto'];
-            $puntuacion += 1;
+    foreach ($caracteristicas as $caracteristica) {
+        $cumple = evaluarCaracteristicaRecomendaciones($caracteristica, $especificaciones);
+        if ($cumple === false) {
+            return $resultado('excluded', 'No cumple lo que pides: ' . $caracteristica['texto'] . '.');
+        }
+        if ($cumple === true) {
+            $pedidasCumplidas[] = $caracteristica['texto'];
         } else {
-            $pedidasSinDato[] = $pedida['texto'] . ' (no consta)';
+            $pedidasSinDato[] = $caracteristica['texto'] . ' (no consta)';
         }
     }
 
-    if ($valoracionTienda === 'adecuado') {
-        $puntuacion += 1;
-    }
-    // Para programar, la autonomía de un portátil solo ordena (más horas, más arriba);
-    // el bonus es menor que un criterio para no alterar el nivel ni pesar más que él.
-    $autonomia = $especificaciones['autonomia_h'] ?? null;
-    if ($categoria === 'portatiles' && $intencion === 'programacion' && (is_int($autonomia) || is_float($autonomia))) {
-        $puntuacion += min((float) $autonomia, 24.0) / 48;
-    }
-    // En portátiles, el texto «gaming» solo ordena; nunca confirma.
-    if ($categoria === 'portatiles' && $intencion === 'gaming' && senalTextoGamingRecomendaciones($textoProducto) !== null) {
-        $puntuacion += 0.5;
-    }
-
-    $pertinentes = [];
-    foreach (clavesPertinentesIntencionRecomendaciones($categoria, $intencion) as $clave) {
-        $hecho = array_key_exists($clave, $especificaciones)
-            ? describirEspecificacionRecomendaciones($clave, $especificaciones[$clave])
-            : null;
-        if ($hecho !== null) {
-            $pertinentes[] = $hecho;
-        }
-    }
-
-    $cumpleTodos = $criterios !== null && $criterios !== [] && $incumplidos === [] && $desconocidos === [];
-    $avaladoPorTienda = $valoracionTienda === 'adecuado' && $incumplidos === [];
-    $cumplePedidasSinUso = $intencion === null && $pedidas !== [] && $pedidasSinDato === [];
-    $clasificacion = $cumpleTodos || $avaladoPorTienda || $cumplePedidasSinUso ? 'confirmed' : 'candidate';
-
-    $para = $intencion !== null ? ' para ' . etiquetaIntencionRecomendaciones($intencion) : '';
+    $puntuacion = (float) count($pedidasCumplidas);
     $frases = [];
-    if ($cumplePedidasSinUso && !$cumpleTodos && !$avaladoPorTienda) {
-        $frases[] = 'Cumple lo que pides: ' . implode('; ', $pedidasCumplidas) . '.';
-    } elseif ($clasificacion === 'confirmed') {
-        $frases[] = $cumpleTodos
-            ? 'Cumple los criterios' . $para . ': ' . implode('; ', $cumplidos) . '.'
-            : 'La tienda lo ha valorado como adecuado' . $para . ' y ningún dato lo contradice.';
-        if (!$cumpleTodos && $cumplidos !== []) {
-            $frases[] = 'Cumple: ' . implode('; ', $cumplidos) . '.';
+    $datos = [];
+    $desconocidos = [];
+    $todosLosUsosCumplen = $usosPedidos !== [];
+
+    foreach ($usosPedidos as $usoPedido) {
+        $para = ' para ' . etiquetaUsoRecomendaciones($usoPedido, $categoria);
+        $criterios = criteriosUsoRecomendaciones($categoria, $usoPedido, $especificaciones, $textoProducto, $necesidadVoz) ?? [];
+        $cumplidos = [];
+        $incumplidos = [];
+
+        foreach ($criterios as $criterio) {
+            if ($criterio['cumple'] === true) {
+                $cumplidos[] = $criterio['texto'];
+                $puntuacion += 1;
+            } elseif ($criterio['cumple'] === false) {
+                $incumplidos[] = $criterio['texto'];
+                $puntuacion -= 1;
+            } else {
+                $desconocidos[] = $criterio['texto'];
+            }
         }
-        if ($cumpleTodos && $valoracionTienda === 'adecuado') {
-            $frases[] = 'Además, la tienda lo ha valorado como adecuado' . $para . '.';
+
+        $valoradoAdecuado = ($valoraciones[$usoPedido] ?? null) === 'adecuado';
+        $puntuacion += ($valoradoAdecuado ? 1 : 0) + bonusOrdenUsoRecomendaciones($categoria, $usoPedido, $especificaciones, $textoProducto);
+        $cumpleTodos = $criterios !== [] && count($cumplidos) === count($criterios);
+        $avaladoPorTienda = $valoradoAdecuado && $incumplidos === [];
+
+        if ($cumpleTodos) {
+            $frases[] = 'Cumple los criterios' . $para . ': ' . implode('; ', $cumplidos) . '.';
+            if ($valoradoAdecuado) {
+                $frases[] = 'Además, la tienda lo ha valorado como adecuado' . $para . '.';
+            }
+        } elseif ($avaladoPorTienda) {
+            $frases[] = 'La tienda lo ha valorado como adecuado' . $para . ' y ningún dato lo contradice.';
+            if ($cumplidos !== []) {
+                $frases[] = 'Cumple: ' . implode('; ', $cumplidos) . '.';
+            }
+        } else {
+            $todosLosUsosCumplen = false;
+            $frases[] = 'Podría servirte' . $para . '.';
+            if ($cumplidos !== []) {
+                $frases[] = 'Cumple: ' . implode('; ', $cumplidos) . '.';
+            }
+            if ($incumplidos !== []) {
+                $frases[] = 'No cumple: ' . implode('; ', $incumplidos) . '.';
+            }
         }
-        if ($pedidasCumplidas !== []) {
-            $frases[] = 'Tiene ' . implode(' y ', $pedidasCumplidas) . ', como pides.';
+
+        $datos = array_merge(
+            $datos,
+            array_map(static fn (string $c): string => 'cumple ' . $c, $cumplidos),
+            array_map(static fn (string $c): string => 'no cumple ' . $c, $incumplidos),
+            $valoradoAdecuado ? ['la tienda lo ha valorado como adecuado' . $para] : []
+        );
+
+        foreach (clavesPertinentesIntencionRecomendaciones($categoria, $usoPedido) as $clave) {
+            $hecho = array_key_exists($clave, $especificaciones)
+                ? describirEspecificacionRecomendaciones($clave, $especificaciones[$clave])
+                : null;
+            if ($hecho !== null && !in_array($hecho, $datos, true)) {
+                $datos[] = $hecho;
+            }
         }
-    } else {
-        $frases[] = $intencion !== null ? 'Podría servirte' . $para . '.' : 'Coincide con el tipo de producto que buscas.';
-        if ($cumplidos !== []) {
-            $frases[] = 'Cumple: ' . implode('; ', $cumplidos) . '.';
-        }
-        if ($incumplidos !== []) {
-            $frases[] = 'No cumple: ' . implode('; ', $incumplidos) . '.';
-        }
-        if ($pedidasCumplidas !== []) {
-            $frases[] = 'Tiene ' . implode(' y ', $pedidasCumplidas) . ', como pides.';
-        }
+    }
+
+    $pedidasCumplen = $pedidasSinDato === [];
+    $clasificacion = $pedidasCumplen && ($usosPedidos === [] ? $pedidasCumplidas !== [] : $todosLosUsosCumplen)
+        ? 'confirmed'
+        : 'candidate';
+
+    if ($usosPedidos === []) {
+        array_unshift($frases, $pedidasCumplidas !== []
+            ? 'Cumple lo que pides: ' . implode('; ', $pedidasCumplidas) . '.'
+            : 'Coincide con el tipo de producto que buscas.');
+    } elseif ($pedidasCumplidas !== []) {
+        $frases[] = 'Tiene ' . implode(' y ', $pedidasCumplidas) . ', como pides.';
     }
     if ($desconocidos !== [] || $pedidasSinDato !== []) {
         $frases[] = 'Sin dato registrado: ' . implode('; ', array_merge($desconocidos, $pedidasSinDato)) . '.';
     }
+
+    $pertinentes = array_values(array_filter($datos, static fn (string $d): bool => !str_starts_with($d, 'cumple ') &&
+        !str_starts_with($d, 'no cumple ') && !str_starts_with($d, 'la tienda ')));
     if ($pertinentes !== []) {
         $frases[] = 'Datos registrados: ' . implode('; ', $pertinentes) . '.';
     }
 
     $datos = array_merge(
-        array_map(static fn (string $c): string => 'cumple ' . $c, $cumplidos),
-        array_map(static fn (string $c): string => 'no cumple ' . $c, $incumplidos),
+        $datos,
         array_map(static fn (string $c): string => 'sin dato: ' . $c, array_merge($desconocidos, $pedidasSinDato)),
-        array_map(static fn (string $c): string => 'tiene ' . $c . ', como pide el cliente', $pedidasCumplidas),
-        $pertinentes,
-        $valoracionTienda === 'adecuado' ? ['la tienda lo ha valorado como adecuado' . $para] : []
+        array_map(static fn (string $c): string => 'tiene ' . $c . ', como pide el cliente', $pedidasCumplidas)
     );
 
-    return [
-        'classification' => $clasificacion,
-        'puntuacion' => $puntuacion,
-        'reason' => implode(' ', $frases),
-        'datos' => $datos,
-    ];
+    return $resultado($clasificacion, implode(' ', $frases), $puntuacion, $datos);
 }
 
 /**
@@ -797,6 +764,67 @@ function construirRespuestaRecomendaciones(
     return $respuesta;
 }
 
+const RECOMENDACIONES_EJEMPLOS_CONSULTA =
+    'Prueba con algo como «portátil para programar», «auriculares para el gimnasio» o «tele para ver series».';
+
+function mensajeConsultaIrreconocibleRecomendaciones(): string
+{
+    return 'No hemos entendido qué buscas. ' . RECOMENDACIONES_EJEMPLOS_CONSULTA;
+}
+
+function mensajeTipoNoDisponibleRecomendaciones(): string
+{
+    return 'No tenemos ese tipo de producto en el catálogo. ' . RECOMENDACIONES_EJEMPLOS_CONSULTA;
+}
+
+function mensajePcAmbiguoRecomendaciones(): string
+{
+    return '«PC» puede ser un portátil, una tarjeta gráfica o un procesador. Indica cuál buscas, por ejemplo «portátil para jugar».';
+}
+
+/** @param list<string> $nombresCategorias */
+function avisoUsoDesconocidoRecomendaciones(array $nombresCategorias): string
+{
+    return 'No hemos identificado para qué lo quieres. Estos son los productos de ' . implode(', ', $nombresCategorias) .
+        ' disponibles; dinos el uso y te recomendaremos los que mejor encajen.';
+}
+
+/**
+ * @param list<string> $etiquetasUsos
+ * @param list<string> $nombresCategorias
+ */
+function avisoUsoNoAplicableRecomendaciones(array $etiquetasUsos, array $nombresCategorias): string
+{
+    return 'No valoramos ' . implode(', ', $nombresCategorias) . ' para ' . implode(' ni para ', $etiquetasUsos) .
+        ', así que no hemos tenido en cuenta ese uso.';
+}
+
+/** @param list<string> $nombresCategorias */
+function mensajeSinStockRecomendaciones(array $nombresCategorias, ?string $agotadoQueCumple): string
+{
+    $mensaje = $nombresCategorias === []
+        ? 'No hay productos disponibles ahora mismo.'
+        : 'No hay ' . mb_strtolower(implode(' ni ', $nombresCategorias), 'UTF-8') . ' disponibles ahora mismo.';
+
+    return $agotadoQueCumple === null
+        ? $mensaje
+        : $mensaje . ' El «' . $agotadoQueCumple . '» cumpliría lo que pides, pero está agotado.';
+}
+
+/** @param array{nombre:string, precio:string} $producto */
+function mensajeMasBaratoQueCumpleRecomendaciones(string $presupuestoEuros, ?string $etiquetaUsos, array $producto): string
+{
+    return 'Ninguno de los productos que cumplen entra en tu presupuesto (' . formatearPrecioRecomendaciones($presupuestoEuros) .
+        '). El más barato que cumple ' . ($etiquetaUsos === null ? 'lo que pides' : 'para ' . $etiquetaUsos) .
+        ' es «' . $producto['nombre'] . '», por ' . formatearPrecioRecomendaciones($producto['precio']) . '.';
+}
+
+/** @param list<string> $etiquetasUsos */
+function mensajeVariosUsosSinResultadoRecomendaciones(array $etiquetasUsos): string
+{
+    return 'Ninguno cumple a la vez para ' . implode(' y para ', $etiquetasUsos) . '. Prueba a buscarlos por separado.';
+}
+
 function formatearPrecioRecomendaciones(string $precio): string
 {
     return number_format((float) $precio, 2, ',', '.') . ' €';
@@ -930,7 +958,7 @@ function resolverTipoProductoRecomendaciones(string $consulta, array $categorias
             'auricular', 'auriculares', 'headphone', 'headphones', 'headset', 'headsets',
         ],
         'Smartwatch' => [
-            'smartwatch', 'smartwatches', 'reloj inteligente', 'relojes inteligentes',
+            'smartwatch', 'smartwatches', 'reloj inteligente', 'relojes inteligentes', 'reloj', 'relojes',
         ],
         'Televisores' => [
             'televisor', 'televisores', 'television', 'televisiones', 'tv', 'tele',

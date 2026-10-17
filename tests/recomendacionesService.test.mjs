@@ -168,3 +168,52 @@ test('rechaza recomendaciones malformadas y mensajes vacíos o demasiado largos'
     });
   }
 });
+
+test('acepta la lista «Disponibles» con su aviso, separada de las recomendaciones', async () => {
+  const message = 'No hemos identificado para qué lo quieres. Estos son los productos de Smartwatch disponibles; dinos el uso y te recomendaremos los que mejor encajen.';
+  const restaurar = conFetchMock({
+    recommendations: [],
+    available: { categoria: 'Smartwatch', productos: [producto, { ...producto, id: 9 }] },
+    message,
+    detection: { usos: [], via: 'ninguna' },
+  });
+  try {
+    const respuesta = await solicitarRecomendaciones(solicitud);
+    assert.deepEqual(respuesta.recommendations, []);
+    assert.equal(respuesta.available.categoria, 'Smartwatch');
+    assert.equal(respuesta.available.productos.length, 2);
+    assert.equal(respuesta.message, message);
+  } finally {
+    restaurar();
+  }
+});
+
+test('conserva los avisos sobre la consulta', async () => {
+  const aviso = 'No valoramos Smartwatch para programar, así que no hemos tenido en cuenta ese uso.';
+  const restaurar = conFetchMock({ recommendations: [], message: 'Sin resultados.', notices: [aviso] });
+  try {
+    const respuesta = await solicitarRecomendaciones(solicitud);
+    assert.deepEqual(respuesta.notices, [aviso]);
+  } finally {
+    restaurar();
+  }
+});
+
+test('rechaza una lista «Disponibles» o unos avisos malformados', async (context) => {
+  const invalidas = [
+    { recommendations: [], message: 'x', available: { categoria: 'Smartwatch', productos: [{ id: 'no' }] } },
+    { recommendations: [], message: 'x', available: { productos: [producto] } },
+    { recommendations: [], message: 'x', notices: 'no es una lista' },
+    { recommendations: [], message: 'x', notices: [''] },
+  ];
+  for (const invalida of invalidas) {
+    await context.test('estructura inválida', async () => {
+      const restaurar = conFetchMock(invalida);
+      try {
+        await assert.rejects(solicitarRecomendaciones(solicitud), (error) => error instanceof ErrorRecomendaciones && error.code === 'invalid_response');
+      } finally {
+        restaurar();
+      }
+    });
+  }
+});
