@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../config/auth.php';
+require_once __DIR__ . '/limite_login.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -74,6 +75,21 @@ $sql = "
 
 try {
 
+    $ip = ipClienteLogin();
+
+    // Demasiados fallos recientes para este email o esta IP: se responde sin comprobar
+    // la contraseña y sin registrar el intento (si no, el bloqueo no terminaría nunca).
+    if (loginBloqueado($pdo, $email, $ip)) {
+        http_response_code(429);
+        header('Retry-After: ' . (LOGIN_VENTANA_MINUTOS * 60));
+
+        echo json_encode([
+            'error' => 'Demasiados intentos de inicio de sesión. Inténtalo de nuevo más tarde.'
+        ]);
+
+        exit;
+    }
+
     $stmt = $pdo->prepare($sql);
 
     $stmt->execute([
@@ -83,6 +99,7 @@ try {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$usuario) {
+        registrarFalloLogin($pdo, $email, $ip);
         http_response_code(401);
 
         echo json_encode([
@@ -98,6 +115,7 @@ try {
             $usuario['password']
         )
     ) {
+        registrarFalloLogin($pdo, $email, $ip);
         http_response_code(401);
 
         echo json_encode([
@@ -112,6 +130,7 @@ try {
      *
      * Creamos una sesión PHP en el servidor.
      */
+    limpiarFallosLoginEmail($pdo, $email);
     iniciarSesion();
 
     session_regenerate_id(true);
