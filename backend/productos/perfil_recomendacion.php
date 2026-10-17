@@ -220,7 +220,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
 
     $esquemas = [
         'portatiles' => [
-            'usos' => ['gaming', 'programacion', 'trabajo', 'edicion'],
+            'usos' => ['gaming', 'programacion', 'trabajo', 'edicion', 'movilidad'],
             'atributos' => [
                 'cpu_modelo' => $texto(120),
                 'ram_gb' => $numeroPositivo(1024),
@@ -230,6 +230,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
                 'autonomia_h' => $numeroPositivo(1000),
                 'pantalla_pulgadas' => $numeroPositivo(200),
                 'pantalla_hz' => $numeroPositivo(1000),
+                'almacenamiento_gb' => $numeroPositivo(100000),
             ],
         ],
         'tarjetas graficas' => [
@@ -237,6 +238,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
             'atributos' => [
                 'vram_gb' => $numeroPositivo(512),
                 'rendimiento_gaming' => $enumerado(['entrada', 'media', 'alta']),
+                'fabricante' => $enumerado(['nvidia', 'amd', 'intel']),
             ],
         ],
         'procesadores' => [
@@ -255,10 +257,12 @@ function esquemaPerfilPorCategoria(string $categoria): array
                 'autonomia_h' => $numeroPositivo(1000),
                 'resistencia_ip' => ['tipo' => 'resistencia_ip'],
                 'peso_g' => $numeroPositivo(10000),
+                'camara_principal_mp' => $numeroPositivo(1000),
+                'pantalla_hz' => $numeroPositivo(1000),
             ],
         ],
         'auriculares' => [
-            'usos' => ['gimnasio', 'gaming', 'trabajo', 'musica'],
+            'usos' => ['gimnasio', 'gaming', 'trabajo', 'musica', 'viajes'],
             'atributos' => [
                 'conexion' => $lista(['bluetooth', 'usb_inalambrico', 'jack']),
                 'autonomia_h' => $numeroPositivo(1000),
@@ -268,6 +272,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
                 'microfono' => ['tipo' => 'booleano'],
                 'peso_g' => $numeroPositivo(10000),
                 'latencia_ms' => $numeroPositivo(10000),
+                'cancelacion_ruido' => ['tipo' => 'booleano'],
             ],
         ],
         'smartwatch' => [
@@ -277,6 +282,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
                 'resistencia_agua_atm' => $numeroPositivo(1000),
                 'gps' => ['tipo' => 'booleano'],
                 'compatibilidad' => $lista(['ios', 'android']),
+                'sensores' => $lista(['frecuencia_cardiaca', 'spo2', 'ecg', 'sueno', 'temperatura']),
             ],
         ],
         'televisores' => [
@@ -286,6 +292,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
                 'resolucion' => $enumerado(['HD', 'Full HD', '4K', '8K']),
                 'pantalla_hz' => $numeroPositivo(1000),
                 'funciones_gaming' => $lista(['ALLM', 'VRR']),
+                'hdr' => $lista(['HDR10', 'HDR10+', 'Dolby Vision', 'HLG']),
             ],
         ],
     ];

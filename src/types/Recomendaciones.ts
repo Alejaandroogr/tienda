@@ -16,16 +16,31 @@ export interface ProductoRecomendado {
   source?: 'ollama' | 'php';
 }
 
-export interface RespuestaRecomendacionesConResultados {
-  recommendations: ProductoRecomendado[];
+/**
+ * Productos de la categoría pedida cuando no se reconoce el uso. Nunca son
+ * recomendaciones: se muestran aparte y con un aviso.
+ */
+export interface ProductosDisponibles {
+  categoria: string;
+  productos: Producto[];
+}
+
+interface CamposComunesRespuesta {
   message?: string;
+  available?: ProductosDisponibles;
+  /** Avisos sobre la consulta, por ejemplo un uso que no aplica a la categoría. */
+  notices?: string[];
+}
+
+export interface RespuestaRecomendacionesConResultados extends CamposComunesRespuesta {
+  recommendations: ProductoRecomendado[];
 }
 
 /**
  * Sin recomendaciones, el backend explica por qué (puede incluir el producto
  * más barato de la categoría, por eso el texto no es fijo).
  */
-export interface RespuestaRecomendacionesSinResultados {
+export interface RespuestaRecomendacionesSinResultados extends CamposComunesRespuesta {
   recommendations: [];
   message: string;
 }

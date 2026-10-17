@@ -196,11 +196,11 @@ comprobar(
 );
 
 // Requisito explícito de micrófono fuera del uso gaming.
-$conMicrofono = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares con micrófono', 'llamadas', true);
+$conMicrofono = evaluarProductoRecomendaciones($auricularAirPods, 'auriculares con micrófono', 'uso diario', true);
 comprobar($conMicrofono['classification'] === 'confirmed', 'sin uso concreto, la característica pedida y confirmada recomienda (antes: podría servir)');
 comprobar($conMicrofono['reason'] === 'Cumple lo que pides: micrófono.', 'motivo confirma el micrófono pedido');
 comprobar(
-    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['conexion' => ['bluetooth']]]), 'auriculares con micrófono', 'llamadas') === 'candidate',
+    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['conexion' => ['bluetooth']]]), 'auriculares con micrófono', 'uso diario') === 'candidate',
     'característica pedida sin dato no recomienda'
 );
 comprobar(
@@ -211,7 +211,7 @@ comprobar(clasificacion($portatilAsus, 'portátil con GPU dedicada', 'trabajo di
 comprobar(clasificacion($portatilMac, 'portátil con GPU dedicada', 'trabajo diario') === 'excluded', 'GPU dedicada pedida y contradicha excluye');
 comprobar(clasificacion($portatilAsus, 'portátil ligero', 'trabajo diario') === 'candidate', 'sin uso ni característica pedida no se recomienda');
 comprobar(
-    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['microfono' => false]]), 'auriculares con micrófono', 'llamadas') === 'excluded',
+    clasificacion(array_replace($auricularAirPods, ['especificaciones' => ['microfono' => false]]), 'auriculares con micrófono', 'uso diario') === 'excluded',
     'micrófono pedido y ausente excluye'
 );
 
@@ -245,20 +245,22 @@ comprobar(
 // M1: los usos negados no cuentan como intención
 // ---------------------------------------------------------------------------
 
-$intenciones = [
-    'portátil para programar, no para juegos' => 'programacion',
-    'auriculares para el gimnasio, no para jugar' => 'gimnasio',
-    'portátil sin jugar, solo para programar' => 'programacion',
-    'no lo quiero para jugar' => null,
-    'portátil para jugar' => 'gaming',
-    'portátil para programar y jugar' => 'gaming',
-    'tele para la consola' => 'gaming',
-    'auriculares para la PS5' => 'gaming',
+// La detección de usos sustituye a la antigua intención única: ahora depende de
+// la categoría y admite hasta dos usos en el orden en que aparecen.
+$usosEsperados = [
+    ['portátil para programar, no para juegos', 'portatiles', ['programacion']],
+    ['auriculares para el gimnasio, no para jugar', 'auriculares', ['gimnasio']],
+    ['portátil sin jugar, solo para programar', 'portatiles', ['programacion']],
+    ['no lo quiero para jugar', 'portatiles', []],
+    ['portátil para jugar', 'portatiles', ['gaming']],
+    ['portátil para programar y jugar', 'portatiles', ['programacion', 'gaming']],
+    ['tele para la consola', 'televisores', ['gaming']],
+    ['auriculares para la PS5', 'auriculares', ['gaming']],
 ];
-foreach ($intenciones as $texto => $esperada) {
+foreach ($usosEsperados as [$texto, $categoriaUso, $esperados]) {
     comprobar(
-        detectarIntencionTecnicaRecomendaciones(normalizarTextoIdoneidadRecomendaciones($texto)) === $esperada,
-        'intención de: ' . $texto
+        detectarUsosCategoriaRecomendaciones(normalizarTextoIdoneidadRecomendaciones($texto), $categoriaUso) === $esperados,
+        'usos de: ' . $texto
     );
 }
 comprobar(
@@ -305,7 +307,7 @@ comprobar(
 $reloj = ['categoria' => 'Smartwatch', 'nombre' => 'Watch', 'especificaciones' => ['gps' => true]];
 comprobar(clasificacion($reloj, 'algo para jugar', 'jugar', false) === 'excluded', 'smartwatch no entra en una búsqueda gaming sin categoría');
 comprobar(clasificacion($grafica, 'algo para jugar', 'jugar', false) === 'confirmed', 'gráfica sí entra en una búsqueda gaming sin categoría');
-comprobar(clasificacion($reloj, 'smartwatch', 'diario', true) === 'candidate', 'con categoría pedida y sin uso reconocido, el producto puede servir');
+comprobar(clasificacion($reloj, 'smartwatch', 'diario', true) === 'unknown', 'con categoría pedida y sin uso reconocido, va a la lista «Disponibles» (antes: podría servir)');
 
 // Programación (opción A): portátiles con RAM >= 16 GB; la autonomía solo ordena.
 $portatilMacConAutonomia = array_replace_recursive($portatilMac, ['especificaciones' => ['autonomia_h' => 18]]);
@@ -423,6 +425,37 @@ $niveles = agruparPorNivelRecomendaciones($evaluados);
 comprobar(array_column($niveles['candidate'], 'id') === [3, 2, 1], 'ordena por puntuación, luego precio, y limita a 3 por nivel');
 comprobar(array_column($niveles['confirmed'], 'id') === [5], 'los recomendados van en su propio nivel');
 
+// Sin categoría pedida: el mejor de cada categoría, en el orden del catálogo, sin
+// comparar puntuaciones entre categorías.
+$sinCategoria = agruparPorCategoriaRecomendaciones([
+    ['id' => 5, 'precio' => '1099.99', 'categoria' => 'Móviles', 'classification' => 'confirmed', 'puntuacion' => 1.4, 'reason' => 'PHP'],
+    ['id' => 4, 'precio' => '1619.00', 'categoria' => 'Móviles', 'classification' => 'confirmed', 'puntuacion' => 1.4, 'reason' => 'PHP'],
+    ['id' => 2, 'precio' => '649.99', 'categoria' => 'Tarjetas gráficas', 'classification' => 'confirmed', 'puntuacion' => 1.0, 'reason' => 'PHP'],
+    ['id' => 8, 'precio' => '129.00', 'categoria' => 'Auriculares', 'classification' => 'confirmed', 'puntuacion' => 4.0, 'reason' => 'PHP'],
+    ['id' => 1, 'precio' => '899.99', 'categoria' => 'Portátiles', 'classification' => 'confirmed', 'puntuacion' => 4.5, 'reason' => 'PHP'],
+    ['id' => 6, 'precio' => '1449.00', 'categoria' => 'Portátiles', 'classification' => 'candidate', 'puntuacion' => 9.0],
+    ['id' => 11, 'precio' => '509.00', 'categoria' => 'Televisores', 'classification' => 'candidate', 'puntuacion' => 0.0],
+]);
+comprobar(array_column($sinCategoria['confirmed'], 'id') === [1, 2, 8, 5], 'sin categoría: uno por categoría y en el orden del catálogo');
+comprobar(
+    array_column(agruparPorCategoriaRecomendaciones([
+        ['id' => 2, 'precio' => '649.99', 'categoria' => 'Tarjetas gráficas', 'classification' => 'confirmed', 'puntuacion' => 0.1],
+        ['id' => 5, 'precio' => '1099.99', 'categoria' => 'Móviles', 'classification' => 'confirmed', 'puntuacion' => 99.0],
+    ])['confirmed'], 'id') === [2, 5],
+    'una puntuación mayor en otra categoría no cambia el orden entre categorías'
+);
+comprobar($sinCategoria['candidate'] === [], 'sin categoría solo se agrupan los recomendados');
+$respuestaSinCategoria = construirRespuestaRecomendaciones(
+    $sinCategoria,
+    array_fill_keys(['1', '2', '8', '5'], ['id' => 0]),
+    [5 => 'Explicación del modelo para el 5', 1 => null, 8 => null, 2 => null],
+    true
+);
+comprobar(
+    array_column($respuestaSinCategoria['recommendations'], 'source') === ['php', 'php', 'php', 'ollama'],
+    'sin categoría el modelo redacta, pero no reordena: el 5 sigue el último'
+);
+
 // ---------------------------------------------------------------------------
 // Validación de la respuesta de Ollama: solo ordena y redacta
 // ---------------------------------------------------------------------------
@@ -490,6 +523,24 @@ comprobar(
         ['id' => 7, 'explicacion' => 'Tiene micrófono y además resulta elegante, ligero, resistente y versátil en cualquier situación.'],
     ]], ['7' => $airPodsMicrofono], 'auriculares con micrófono')[7] === null,
     'descarta explicaciones con demasiadas palabras ajenas a los datos'
+);
+
+// Regresión real («algo para jugar»): el modelo atribuía a la tienda valoraciones que no existen.
+$graficaModelo = ['2' => ['nombre' => 'NVIDIA RTX 5070', 'categoria' => 'Tarjetas gráficas', 'reason' => 'Cumple los criterios para jugar: VRAM de 12 GB (mínimo 8 GB).', 'datos' => ['cumple VRAM de 12 GB (mínimo 8 GB)']]];
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [['id' => 2, 'explicacion' => 'Cumple VRAM de 12 GB (mínimo 8 GB), suficiente para jugar según la tienda.']]], $graficaModelo)[2] === null,
+    'descarta una valoración de la tienda que el producto no tiene'
+);
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [['id' => 2, 'explicacion' => 'Cumple los criterios para jugar con VRAM de 12 GB (mínimo 8 GB).']]], $graficaModelo)[2] !== null,
+    'acepta la misma explicación sin la valoración inventada'
+);
+comprobar(
+    validarRespuestaModeloRecomendaciones(['orden' => [['id' => 1, 'explicacion' => 'Cumple GPU dedicada, RAM de 16 GB y pantalla de 144 Hz; además la tienda lo ha valorado como adecuado para jugar.']]], ['1' => [
+        'nombre' => 'ASUS', 'categoria' => 'Portátiles', 'reason' => 'Cumple los criterios para jugar. Además, la tienda lo ha valorado como adecuado para jugar.',
+        'datos' => ['cumple GPU dedicada', 'cumple RAM de 16 GB (mínimo 16 GB)', 'cumple pantalla de 144 Hz (mínimo 120 Hz)', 'la tienda lo ha valorado como adecuado para jugar'],
+    ]])[1] !== null,
+    'acepta la valoración de la tienda cuando el producto la tiene'
 );
 
 esperarError(fn () => validarRespuestaModeloRecomendaciones(['orden' => [['id' => 999, 'explicacion' => 'x']]], $productosModelo), 'invalid_product_id', 'ID que no se pasó al modelo');

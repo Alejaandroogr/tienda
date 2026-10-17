@@ -1,6 +1,7 @@
 import type { Producto } from '../types/Producto';
 import type {
   CodigoErrorRecomendaciones,
+  ProductosDisponibles,
   RespuestaErrorRecomendaciones,
   RespuestaRecomendaciones,
   SolicitudRecomendaciones,
@@ -85,9 +86,40 @@ function normalizarRespuestaRecomendaciones(
     return null;
   }
 
+  let available: ProductosDisponibles | undefined;
+  if (valor.available !== undefined) {
+    if (
+      !esObjeto(valor.available) ||
+      typeof valor.available.categoria !== 'string' ||
+      !Array.isArray(valor.available.productos) ||
+      !valor.available.productos.every(esProducto)
+    ) {
+      return null;
+    }
+    available = {
+      categoria: valor.available.categoria,
+      productos: valor.available.productos as Producto[],
+    };
+  }
+
+  let notices: string[] | undefined;
+  if (valor.notices !== undefined) {
+    if (
+      !Array.isArray(valor.notices) ||
+      !valor.notices.every(
+        (aviso) => typeof aviso === 'string' && aviso.trim() !== '' && aviso.length <= LONGITUD_MAXIMA_MENSAJE
+      )
+    ) {
+      return null;
+    }
+    notices = valor.notices as string[];
+  }
+
   return {
     recommendations: valor.recommendations as RespuestaRecomendaciones['recommendations'],
     ...(message === undefined ? {} : { message }),
+    ...(available === undefined || available.productos.length === 0 ? {} : { available }),
+    ...(notices === undefined || notices.length === 0 ? {} : { notices }),
   };
 }
 
