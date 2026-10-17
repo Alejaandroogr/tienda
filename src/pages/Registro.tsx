@@ -21,6 +21,10 @@ function Registro() {
       toast.error('Completa todos los campos');
       return;
     }
+    if (password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
     if (password !== confirmPassword) {
       toast.error('Las contraseñas no coinciden');
       return;
@@ -50,7 +54,7 @@ function Registro() {
       <div className="store-auth-form-wrap"><Card className="store-auth-card"><CardHeader><p className="eyebrow">EMPIEZA EN TECHSTORE</p><CardTitle>Crear una cuenta</CardTitle><p>Completa tus datos para registrarte.</p></CardHeader><CardContent><form className="store-form" onSubmit={manejarRegistro}>
         <div className="store-form-field"><Label htmlFor="nombre">Nombre</Label><div className="store-input-icon"><UserRound size={16} /><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Tu nombre" autoComplete="name" required /></div></div>
         <div className="store-form-field"><Label htmlFor="email">Correo electrónico</Label><div className="store-input-icon"><Mail size={16} /><Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" autoComplete="email" required /></div></div>
-        <div className="store-form-field"><Label htmlFor="password">Contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Crea una contraseña" autoComplete="new-password" required /></div></div>
+        <div className="store-form-field"><Label htmlFor="password">Contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Al menos 8 caracteres" autoComplete="new-password" minLength={8} required /></div></div>
         <div className="store-form-field"><Label htmlFor="confirmPassword">Confirmar contraseña</Label><div className="store-input-icon"><LockKeyhole size={16} /><Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite tu contraseña" autoComplete="new-password" required /></div></div>
         <Button type="submit" size="lg" disabled={cargando}>{cargando ? 'Creando cuenta…' : 'Crear cuenta'} {!cargando && <ArrowRight size={16} />}</Button>
       </form><p className="store-auth-switch">¿Ya tienes una cuenta? <Link to="/login">Iniciar sesión</Link></p></CardContent></Card></div>

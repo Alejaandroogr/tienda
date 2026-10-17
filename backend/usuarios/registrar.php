@@ -62,6 +62,27 @@ if (
     exit;
 }
 
+// Límites del registro. El login no los aplica: los usuarios existentes con
+// contraseñas más cortas pueden seguir entrando.
+$errorRegistro = match (true) {
+    mb_strlen($nombre, 'UTF-8') > 100 => 'El nombre admite como máximo 100 caracteres',
+    strlen($email) > 150 || filter_var($email, FILTER_VALIDATE_EMAIL) === false => 'El correo electrónico no es válido',
+    mb_strlen($password, 'UTF-8') < 8 => 'La contraseña debe tener al menos 8 caracteres',
+    // bcrypt (PASSWORD_DEFAULT) ignora lo que pasa de 72 bytes.
+    strlen($password) > 72 => 'La contraseña admite como máximo 72 caracteres',
+    default => null,
+};
+
+if ($errorRegistro !== null) {
+    http_response_code(400);
+
+    echo json_encode([
+        'error' => $errorRegistro
+    ]);
+
+    exit;
+}
+
 $passwordHash = password_hash(
     $password,
     PASSWORD_DEFAULT
