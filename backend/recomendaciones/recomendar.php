@@ -282,14 +282,15 @@ if (!is_array($entrada)) {
 }
 
 $consulta = $entrada['consulta'] ?? null;
-$uso = $entrada['uso'] ?? null;
+// El uso es opcional: si falta, es null o está vacío, se detecta solo a partir de la consulta.
+$uso = $entrada['uso'] ?? '';
 $presupuesto = $entrada['presupuesto'] ?? null;
 
 if (!is_string($consulta) || !is_string($uso)) {
     errorRecomendaciones(
         400,
         'invalid_request',
-        'Indica qué producto buscas y para qué lo necesitas'
+        'Indica qué producto buscas'
     );
 }
 
@@ -299,13 +300,12 @@ $uso = trim($uso);
 if (
     $consulta === '' ||
     contarCaracteresRecomendaciones($consulta) > 120 ||
-    $uso === '' ||
     contarCaracteresRecomendaciones($uso) > 300
 ) {
     errorRecomendaciones(
         400,
         'invalid_request',
-        'La búsqueda debe tener hasta 120 caracteres y el uso hasta 300'
+        'Indica qué producto buscas (hasta 120 caracteres); el uso es opcional y admite hasta 300'
     );
 }
 
@@ -664,10 +664,11 @@ if ($usosPalabras === [] && !$hayCaracteristicas) {
             array_map(static fn (string $u): string => etiquetaUsoRecomendaciones($u), array_keys($usosGlobales)),
             $nombresCategorias
         );
-    } elseif ($nombresCategorias !== []) {
+    } elseif ($nombresCategorias !== [] && textoInterpretableRecomendaciones($consulta . ' ' . $uso) !== '') {
         // Paso 2: Ollama clasifica la consulta en un uso de la lista cerrada. Solo con una
-        // categoría reconocida: sin ella, un error del modelo («hola» → gaming) llevaba a
-        // recomendar productos de todo el catálogo.
+        // categoría reconocida (sin ella, un error del modelo, «hola» → gaming, llevaba a
+        // recomendar productos de todo el catálogo) y si queda algo más que el nombre del
+        // producto: con «smartwatch» a secas el modelo se inventaba un uso (gimnasio).
         $permitidos = [];
         foreach ($categoriasObjetivo as $categoriaObjetivo) {
             foreach ($catalogo[$categoriaObjetivo] as $idUso => $definicion) {

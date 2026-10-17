@@ -156,8 +156,9 @@ function RecommendationForm() {
       return;
     }
 
-    if (!validarLongitud(usoLimpio, 300)) {
-      setError('Describe para qué lo necesitas (máximo 300 caracteres).');
+    // El uso es opcional: vacío, el asistente lo deduce del producto buscado.
+    if (Array.from(usoLimpio).length > 300) {
+      setError('El uso admite como máximo 300 caracteres.');
       setRespuesta(null);
       return;
     }
@@ -212,7 +213,7 @@ function RecommendationForm() {
             Encuentra lo que necesitas
           </CardTitle>
           <CardDescription>
-            Cuéntanos qué buscas, para qué lo usarás y cuánto quieres invertir.
+            Cuéntanos qué buscas y cuánto quieres invertir; si quieres, dinos también para qué lo usarás.
             Te sugeriremos opciones disponibles del catálogo.
           </CardDescription>
         </CardHeader>
@@ -248,16 +249,15 @@ function RecommendationForm() {
             </div>
 
             <div className="recommendation-field recommendation-field-full">
-              <label htmlFor="recommendation-use">¿Para qué lo necesitas?</label>
+              <label htmlFor="recommendation-use">¿Para qué lo necesitas? (opcional)</label>
               <Textarea
                 id="recommendation-use"
                 name="uso"
                 value={uso}
                 onChange={(evento) => setUso(evento.target.value)}
-                placeholder="Cuéntanos qué tareas, actividades o características son importantes"
+                placeholder="Por ejemplo, para programar o para el gimnasio. Si lo dejas en blanco, lo deduciremos de lo que buscas."
                 maxLength={300}
                 rows={3}
-                required
                 disabled={cargando}
               />
               <span className="recommendation-character-count">

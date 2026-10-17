@@ -159,6 +159,20 @@ comprobar(evaluar($mac, 'portátil para casa', '', true, ['trabajo'])['classific
 comprobar(evaluar($mac, 'portátil', '', true, ['salud'])['classification'] === 'unknown', 'uso forzado que no existe en la categoría se ignora');
 comprobar(evaluar(array_replace($mac, ['usos' => ['programacion' => 'no_recomendado']]), 'portátil para programar y jugar')['classification'] === 'excluded', 'valoración «no adecuado» de uno de los usos excluye');
 
+// --- Uso opcional: con el campo vacío, todo sale de la consulta ------------------
+
+comprobar(evaluar($asus, 'portátil gaming', '')['classification'] === 'confirmed', 'uso vacío: «portátil gaming» recomienda el ASUS');
+comprobar(evaluar($asus, 'portátil gaming', '')['usos'] === ['gaming'], 'uso vacío: el uso se detecta en la consulta');
+comprobar(evaluar($mac, 'portátil', '')['classification'] === 'unknown', 'uso vacío y consulta sin uso: lista «Disponibles»');
+comprobar(evaluar($mac, 'portátil', 'para programar')['classification'] === 'confirmed', 'el uso escrito aparte se sigue teniendo en cuenta');
+
+// Solo se pregunta a Ollama si queda algo más que el nombre del producto.
+foreach (['smartwatch', 'un smartwatch', 'reloj inteligente', 'tele', 'quiero un portátil'] as $soloProducto) {
+    comprobar(textoInterpretableRecomendaciones($soloProducto) === '', "solo el producto, nada que interpretar: «{$soloProducto}»");
+}
+comprobar(textoInterpretableRecomendaciones('portátil para casa') === 'casa', 'queda texto que interpretar: «casa»');
+comprobar(textoInterpretableRecomendaciones('smartwatch es un regalo') === 'regalo', 'queda texto que interpretar: «regalo»');
+
 // --- Validación de la clasificación de Ollama ------------------------------------
 
 comprobar(validarClasificacionUsoModeloRecomendaciones(['uso' => 'trabajo'], ['gaming', 'trabajo']) === 'trabajo', 'acepta un uso de la lista');

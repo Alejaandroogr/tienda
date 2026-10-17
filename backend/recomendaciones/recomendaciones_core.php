@@ -1008,9 +1008,14 @@ function normalizarSinonimosRecomendaciones(string $texto): string
     ) ?? $textoNormalizado;
 }
 
-function resolverTipoProductoRecomendaciones(string $consulta, array $categorias): array
+/**
+ * Palabras con las que se nombra cada tipo de producto (ya normalizadas).
+ *
+ * @return array<string, list<string>>
+ */
+function reglasTipoProductoRecomendaciones(): array
 {
-    $reglas = [
+    return [
         'Portátiles' => [
             'portatil', 'portatiles', 'laptop', 'laptops', 'notebook', 'notebooks',
             'ordenador portatil', 'ordenadores portatiles',
@@ -1032,6 +1037,32 @@ function resolverTipoProductoRecomendaciones(string $consulta, array $categorias
             'televisor', 'televisores', 'television', 'televisiones', 'tv', 'tele',
         ],
     ];
+}
+
+/**
+ * Texto de la consulta y el uso sin las palabras que nombran el producto ni las palabras
+ * vacías. Si queda vacío, no hay nada que interpretar sobre el uso («smartwatch»), así
+ * que no tiene sentido preguntar a Ollama: un uso clasificado ahí sería inventado.
+ */
+function textoInterpretableRecomendaciones(string $texto): string
+{
+    $normalizado = ' ' . normalizarTextoRecomendaciones(normalizarSinonimosRecomendaciones($texto)) . ' ';
+    $frases = array_merge(...array_values(reglasTipoProductoRecomendaciones()));
+    usort($frases, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+    foreach ($frases as $frase) {
+        $normalizado = str_replace(' ' . normalizarTextoRecomendaciones($frase) . ' ', ' ', $normalizado);
+    }
+
+    $vacias = ['a', 'al', 'algo', 'busco', 'con', 'de', 'del', 'el', 'en', 'es', 'la', 'las', 'lo', 'los',
+        'me', 'mi', 'necesito', 'para', 'por', 'que', 'quiero', 'su', 'un', 'una', 'unos', 'unas', 'y'];
+    $palabras = array_filter(explode(' ', trim($normalizado)), static fn (string $p): bool => $p !== '' && !in_array($p, $vacias, true));
+
+    return implode(' ', $palabras);
+}
+
+function resolverTipoProductoRecomendaciones(string $consulta, array $categorias): array
+{
+    $reglas = reglasTipoProductoRecomendaciones();
     $consultaNormalizada = ' ' . normalizarTextoRecomendaciones($consulta) . ' ';
     $idsPorCategoria = [];
 
