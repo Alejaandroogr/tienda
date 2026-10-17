@@ -4,6 +4,9 @@
 // bateria_endpoint.php, que define NEUTRO y $SIN.
 return [
     5 => ['portátil para editar vídeo', NEUTRO, 2000, ['rec' => [1, 6]]],
+    // Música solo se recomienda si lo marca el administrador: los AirPods tienen
+    // «musica: adecuado» desde el 17/10/2026 (marcado desde el panel).
+    24 => ['auriculares para escuchar música', NEUTRO, 2000, ['rec' => [7]]],
     25 => ['auriculares con cancelación de ruido para el avión', NEUTRO, 2000, ['rec' => [7]]],
     31 => ['móvil para hacer fotos', NEUTRO, 2000, ['rec' => [4, 5]]],
     34 => ['teléfono con mucha batería para viajar', NEUTRO, 2000, ['rec' => [4, 5]]],

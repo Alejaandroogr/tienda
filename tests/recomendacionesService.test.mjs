@@ -217,3 +217,23 @@ test('rechaza una lista «Disponibles» o unos avisos malformados', async (conte
     });
   }
 });
+
+test('envía la solicitud con el uso vacío sin rechazarla', async () => {
+  const fetchOriginal = globalThis.fetch;
+  let cuerpoEnviado;
+  globalThis.fetch = async (_url, opciones) => {
+    cuerpoEnviado = JSON.parse(opciones.body);
+    return new Response(JSON.stringify({ recommendations: [{ producto, reason: 'Cumple los criterios para jugar.' }] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+  try {
+    const respuesta = await solicitarRecomendaciones({ consulta: 'portátil gaming', uso: '', presupuesto: 2000 });
+    assert.equal(cuerpoEnviado.uso, '');
+    assert.equal(cuerpoEnviado.consulta, 'portátil gaming');
+    assert.equal(respuesta.recommendations.length, 1);
+  } finally {
+    globalThis.fetch = fetchOriginal;
+  }
+});
