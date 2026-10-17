@@ -16,7 +16,16 @@ Git: está excluido en `.gitignore`. La plantilla contiene valores de ejemplo,
 no credenciales de producción.
 
 Los endpoints existentes incluyen `config/database.php` sin seleccionar modo;
-el comportamiento predeterminado continúa terminando con el mensaje histórico
-si falla la conexión. El endpoint de recomendaciones selecciona el modo
-`exception` antes de incluir la configuración para poder responder con JSON
-genérico y registrar los detalles solo en el log del servidor.
+si falla la conexión, responden `503` con un error JSON genérico y registran el
+detalle solo en el log del servidor. El endpoint de recomendaciones selecciona
+el modo `exception` antes de incluir la configuración para gestionar el fallo
+con su propio formato de error.
+
+## Errores y validación de entrada
+
+`config/errores.php` se carga desde la conexión y desde `config/auth.php`.
+Desactiva `display_errors`, registra los errores en el log y responde `500` con
+un JSON genérico ante cualquier excepción o error fatal no controlado, de modo
+que nunca se envían rutas, SQL ni trazas al cliente. También ofrece
+`campoTextoSolicitud()` y `campoEnteroSolicitud()` para validar el tipo de los
+campos del cuerpo JSON antes de usarlos.

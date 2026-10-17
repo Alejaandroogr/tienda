@@ -1,8 +1,11 @@
 <?php
 
+require_once __DIR__ . '/errores.php';
+
 /**
  * Crea la conexión PDO compartida por los endpoints del backend.
- * El modo predeterminado conserva la respuesta die() histórica.
+ * En el modo predeterminado, un fallo de conexión responde con un error JSON
+ * genérico; el detalle (host, usuario, SQLSTATE) solo se registra en el log.
  */
 function crearConexionBaseDatos(
     string $host,
@@ -27,6 +30,14 @@ function crearConexionBaseDatos(
             throw $error;
         }
 
-        die('Error de conexión: ' . $error->getMessage());
+        error_log('Error de conexión a la base de datos: ' . $error->getMessage());
+
+        if (!headers_sent()) {
+            http_response_code(503);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+
+        echo json_encode(['error' => 'Servicio no disponible temporalmente'], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

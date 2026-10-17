@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once '../config/database.php';
 require_once '../config/auth.php';
+require_once __DIR__ . '/pedido_lineas.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -62,16 +63,14 @@ if (
     exit;
 }
 
-$productos = $datos['productos'];
-
-if (
-    !is_array($productos) ||
-    count($productos) === 0
-) {
+try {
+    // Agrupa líneas repetidas del mismo producto: el stock se valida sobre el total.
+    $cantidadesPorProducto = normalizarLineasPedido($datos['productos']);
+} catch (ErrorLineasPedido $error) {
     http_response_code(400);
 
     echo json_encode([
-        'error' => 'El pedido no contiene productos'
+        'error' => $error->getMessage()
     ]);
 
     exit;
@@ -115,42 +114,10 @@ try {
     $detalles = [];
 
     /*
-     * Comprobar todos los productos y el stock.
+     * Comprobar todos los productos y el stock sobre la cantidad total
+     * pedida de cada producto (las líneas repetidas ya están agrupadas).
      */
-    foreach ($productos as $producto) {
-
-        if (
-            !isset($producto['producto_id']) ||
-            !isset($producto['cantidad'])
-        ) {
-            $pdo->rollBack();
-
-            http_response_code(400);
-
-            echo json_encode([
-                'error' => 'Producto del pedido no válido'
-            ]);
-
-            exit;
-        }
-
-        $productoId = (int) $producto['producto_id'];
-        $cantidad = (int) $producto['cantidad'];
-
-        if (
-            $productoId <= 0 ||
-            $cantidad <= 0
-        ) {
-            $pdo->rollBack();
-
-            http_response_code(400);
-
-            echo json_encode([
-                'error' => 'Cantidad o producto no válido'
-            ]);
-
-            exit;
-        }
+    foreach ($cantidadesPorProducto as $productoId => $cantidad) {
 
         /*
          * FOR UPDATE bloquea la fila mientras se procesa
@@ -255,12 +222,14 @@ try {
     $stmtDetalle = $pdo->prepare($sqlDetalle);
 
     /*
-     * Actualizar el stock.
+     * Actualizar el stock. La condición stock >= cantidad es una segunda
+     * barrera: nunca deja el stock en negativo.
      */
     $sqlStock = "
         UPDATE productos
         SET stock = stock - :cantidad
         WHERE id = :producto_id
+        AND stock >= :cantidad_minima
     ";
 
     $stmtStock = $pdo->prepare($sqlStock);
@@ -276,8 +245,21 @@ try {
 
         $stmtStock->execute([
             ':cantidad' => $detalle['cantidad'],
+            ':cantidad_minima' => $detalle['cantidad'],
             ':producto_id' => $detalle['producto_id']
         ]);
+
+        if ($stmtStock->rowCount() !== 1) {
+            $pdo->rollBack();
+
+            http_response_code(409);
+
+            echo json_encode([
+                'error' => 'No hay suficiente stock para uno de los productos'
+            ]);
+
+            exit;
+        }
     }
 
     $pdo->commit();
