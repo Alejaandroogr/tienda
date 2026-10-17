@@ -80,6 +80,20 @@ try {
         exit;
     }
 
+    // El aviso de productos solo se da si la categoría tiene productos de verdad.
+    $stmtProductos = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE categoria_id = :id');
+    $stmtProductos->execute([':id' => $id]);
+
+    if ((int) $stmtProductos->fetchColumn() > 0) {
+        http_response_code(409);
+
+        echo json_encode([
+            'error' => 'No se puede eliminar la categoría porque tiene productos asociados'
+        ]);
+
+        exit;
+    }
+
     $sql = "
         DELETE FROM categorias
         WHERE id = :id
@@ -97,9 +111,15 @@ try {
 
 } catch (PDOException $error) {
 
-    http_response_code(409);
+    error_log('No se pudo eliminar la categoría ' . $id . ': ' . $error->getMessage());
+
+    // 1451: otra tabla depende de la categoría (clave ajena). Los productos ya se han comprobado antes.
+    $dependencia = ($error->errorInfo[1] ?? null) === 1451;
+    http_response_code($dependencia ? 409 : 500);
 
     echo json_encode([
-        'error' => 'No se puede eliminar la categoría porque tiene productos asociados'
+        'error' => $dependencia
+            ? 'No se puede eliminar la categoría porque otros datos dependen de ella'
+            : 'No se ha podido eliminar la categoría'
     ]);
 }

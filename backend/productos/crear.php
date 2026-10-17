@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/perfil_recomendacion.php';
+require_once __DIR__ . '/validacion_producto.php';
 
 exigirAdministrador();
 
@@ -70,8 +71,29 @@ if (
 
 $nombre = trim($datos['nombre']);
 $descripcion = trim($datos['descripcion']);
-$precio = (float) $datos['precio'];
-$stock = (int) $datos['stock'];
+// Sin convertir textos como «abc» en 0: un precio o un stock no numérico es un error.
+$precio = precioProductoValido($datos['precio']);
+$stock = stockProductoValido($datos['stock']);
+
+if ($precio === null) {
+    http_response_code(400);
+
+    echo json_encode([
+        'error' => 'El precio debe ser un número mayor o igual que 0, con dos decimales como máximo'
+    ]);
+
+    exit;
+}
+
+if ($stock === null) {
+    http_response_code(400);
+
+    echo json_encode([
+        'error' => 'El stock debe ser un número entero mayor o igual que 0'
+    ]);
+
+    exit;
+}
 $categoriaId = (int) $datos['categoria_id'];
 
 if (array_key_exists('perfil_ia', $datos) && $datos['perfil_ia'] !== null && !$datos['perfil_ia'] instanceof stdClass) {
@@ -95,8 +117,7 @@ if (isset($datos['imagen'])) {
 if (
     $nombre === '' ||
     $descripcion === '' ||
-    $precio < 0 ||
-    $stock < 0 ||
+    mb_strlen($nombre, 'UTF-8') > 150 ||
     $categoriaId <= 0
 ) {
     http_response_code(400);

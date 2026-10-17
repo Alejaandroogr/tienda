@@ -26,6 +26,20 @@ const estados = [
   'cancelado',
 ];
 
+// Debe coincidir con TRANSICIONES_PEDIDO de backend/pedidos/estados_pedido.php.
+const TRANSICIONES_PEDIDO: Record<string, readonly string[]> = {
+  pendiente: ['procesando', 'cancelado'],
+  procesando: ['enviado', 'cancelado'],
+  enviado: ['entregado'],
+  entregado: [],
+  cancelado: [],
+};
+
+/** El estado actual y los estados a los que se puede pasar desde él. */
+function estadosDisponibles(estadoActual: string): string[] {
+  return [estadoActual, ...(TRANSICIONES_PEDIDO[estadoActual] ?? [])];
+}
+
 function AdminPedidos() {
   const { usuario } = useAuth();
 
@@ -127,7 +141,7 @@ function AdminPedidos() {
         )
       );
 
-      setMensaje('Estado del pedido actualizado correctamente.');
+      setMensaje(datos.mensaje || 'Estado del pedido actualizado correctamente.');
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -333,9 +347,13 @@ function AdminPedidos() {
                       <td>
                         <div className="admin-order-state-cell">
                         <Badge variant={pedido.estado === 'cancelado' ? 'destructive' : pedido.estado === 'entregado' ? 'secondary' : pedido.estado === 'enviado' ? 'default' : 'outline'} className={`admin-state-badge state-${pedido.estado}`}>{pedido.estado}</Badge>
-                        <Select value={pedido.estado} onValueChange={(value) => { if (value) void cambiarEstado(pedido.id, value); }}>
-                          <SelectTrigger className={`admin-order-status status-${pedido.estado}`} disabled={actualizandoId === pedido.id}><SelectValue /></SelectTrigger>
-                          <SelectContent>{estados.map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}</SelectContent>
+                        <Select value={pedido.estado} onValueChange={(value) => { if (value && value !== pedido.estado) void cambiarEstado(pedido.id, value); }}>
+                          <SelectTrigger
+                            className={`admin-order-status status-${pedido.estado}`}
+                            disabled={actualizandoId === pedido.id || (TRANSICIONES_PEDIDO[pedido.estado] ?? []).length === 0}
+                            title={(TRANSICIONES_PEDIDO[pedido.estado] ?? []).length === 0 ? `Un pedido ${pedido.estado} no puede cambiar de estado` : undefined}
+                          ><SelectValue /></SelectTrigger>
+                          <SelectContent>{estadosDisponibles(pedido.estado).map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}</SelectContent>
                         </Select>
                         </div>
                       </td>

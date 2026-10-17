@@ -81,6 +81,20 @@ try {
         exit;
     }
 
+    // El aviso de pedidos solo se da si el producto tiene pedidos de verdad.
+    $stmtPedidos = $pdo->prepare('SELECT COUNT(*) FROM detalle_pedido WHERE producto_id = :id');
+    $stmtPedidos->execute([':id' => $id]);
+
+    if ((int) $stmtPedidos->fetchColumn() > 0) {
+        http_response_code(409);
+
+        echo json_encode([
+            'error' => 'No se puede eliminar el producto porque tiene pedidos relacionados'
+        ]);
+
+        exit;
+    }
+
     // Eliminar producto
     $sql = "
         DELETE FROM productos
@@ -99,9 +113,16 @@ try {
 
 } catch (PDOException $error) {
 
-    http_response_code(409);
+    error_log('No se pudo eliminar el producto ' . $id . ': ' . $error->getMessage());
+
+    // 1451: otra tabla depende del producto (clave ajena). No se atribuye a pedidos,
+    // que ya se han comprobado antes.
+    $dependencia = ($error->errorInfo[1] ?? null) === 1451;
+    http_response_code($dependencia ? 409 : 500);
 
     echo json_encode([
-        'error' => 'No se puede eliminar el producto porque está relacionado con pedidos'
+        'error' => $dependencia
+            ? 'No se puede eliminar el producto porque otros datos dependen de él'
+            : 'No se ha podido eliminar el producto'
     ]);
 }
