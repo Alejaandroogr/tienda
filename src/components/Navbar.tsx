@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowRight, Cpu, LogOut, Menu, Package, ShoppingBag, UserRound } from 'lucide-react';
 import { useCarrito } from '../context/useCarrito';
 import { useAuth } from '../context/useAuth';
@@ -12,6 +12,8 @@ function Navbar() {
   const { usuario, cerrarSesion } = useAuth();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const navigate = useNavigate();
+  // En el panel, en móvil, solo se muestra la cabecera del panel (ver .store-navbar-admin en App.css).
+  const enPanelAdmin = useLocation().pathname.startsWith('/admin');
   const cantidadProductos = carrito.reduce((total, item) => total + item.cantidad, 0);
 
   const manejarCerrarSesion = async () => {
@@ -41,7 +43,7 @@ function Navbar() {
   ) : <Link className="store-nav-link" to="/login"><UserRound size={17} /> Iniciar sesión</Link>;
 
   return (
-    <header className="navbar store-navbar">
+    <header className={`navbar store-navbar${enPanelAdmin ? ' store-navbar-admin' : ''}`}>
       <div className="navbar-container store-navbar-container">
         <Link to="/" className="navbar-logo store-logo" aria-label="Techstore, inicio">
           <span className="store-logo-mark"><Cpu size={20} /></span>
