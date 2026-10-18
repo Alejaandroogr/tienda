@@ -11,7 +11,7 @@ import AdminPagination from '../../components/admin/AdminPagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { Table } from '../../components/ui/table';
+import AdminTable from '../../components/admin/AdminTable';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -792,6 +792,10 @@ function AdminProductos() {
             />
 
             <Select
+              items={[
+                { label: 'Todas las categorías', value: 'todas' },
+                ...categorias.map((categoria) => ({ label: categoria.nombre, value: categoria.nombre })),
+              ]}
               value={categoriaFiltro || 'todas'}
               onValueChange={(value) => {
                 setCategoriaFiltro(
@@ -900,6 +904,7 @@ function AdminProductos() {
                     </Label>
 
                     <Select
+                      items={categorias.map((categoria) => ({ label: categoria.nombre, value: String(categoria.id) }))}
                       value={categoriaId || null}
                       onValueChange={(value) => cambiarCategoriaFormulario(value ?? '')}
                       disabled={estadoPerfil === 'cargando'}
@@ -1110,7 +1115,7 @@ function AdminProductos() {
 
               <div className="admin-products-table">
 
-                <Table>
+                <AdminTable>
 
                   <thead>
 
@@ -1254,7 +1259,7 @@ function AdminProductos() {
 
                   </tbody>
 
-                </Table>
+                </AdminTable>
 
               </div>
 

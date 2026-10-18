@@ -258,7 +258,7 @@ function PedidoDetalle() {
               <tbody>
                 {pedido.detalles.map((detalle) => (
                   <tr key={detalle.id}>
-                    <td>
+                    <td className="order-detail-table-product-cell">
                       <div className="order-detail-table-product">
                         {detalle.imagen ? (
                           <img src={detalle.imagen} alt="" />
@@ -268,9 +268,9 @@ function PedidoDetalle() {
                         <strong>{detalle.nombre}</strong>
                       </div>
                     </td>
-                    <td>{detalle.cantidad}</td>
-                    <td>{Number(detalle.precio).toFixed(2)} €</td>
-                    <td>
+                    <td data-label="Cantidad">{detalle.cantidad}</td>
+                    <td data-label="Precio">{Number(detalle.precio).toFixed(2)} €</td>
+                    <td data-label="Subtotal">
                       {(
                         Number(detalle.precio) * detalle.cantidad
                       ).toFixed(2)}{' '}

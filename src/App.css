@@ -3053,7 +3053,13 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .store-product-skeleton > span:last-child { width: 60%; }
 @keyframes store-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes store-shimmer { to { background-position: -100% 0; } }
-@media (max-width: 1000px) { .store-desktop-account { gap: 10px; } .store-desktop-account .store-user { display: none; } }
+@media (max-width: 1000px) { .store-desktop-account { gap: 10px; } }
+@media (max-width: 1140px) { .store-desktop-account .store-user { display: none; } }
+/* Los enlaces de cuenta no se parten en dos líneas y el saludo no puede empujar la barra fuera de la pantalla. */
+.store-primary-nav a, .store-desktop-account > * { white-space: nowrap; }
+.store-user { min-width: 0; max-width: 200px; } .store-user { overflow: hidden; text-overflow: ellipsis; display: inline-block; } .store-user svg { display: inline; vertical-align: -3px; margin-right: 7px; }
+/* En tablet los enlaces de cuenta (hasta cuatro con sesión de administrador) no caben: pasan al menú lateral. */
+@media (max-width: 900px) { .store-desktop-account { display: none; } .store-menu-trigger { display: inline-flex; } .store-nav-actions { gap: 8px; } }
 @media (max-width: 900px) { .products-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 760px) { .store-navbar-container { height: 66px; padding-inline: 18px; flex-direction: row; } .store-primary-nav, .store-desktop-account { display: none; } .store-menu-trigger { display: inline-flex; } .store-nav-actions { gap: 8px; } .store-cart-link { width: 38px; padding: 0; } .store-cart-label { display: none; } .store-hero-content { grid-template-columns: 1fr; min-height: auto; padding: 44px 25px 38px; } .store-hero-art { min-height: 150px; } .store-art-chip { width: 132px; height: 132px; border-radius: 22px; } .store-art-chip svg { width: 68px; } .store-catalog { padding: 48px 22px 58px; } .store-filters { grid-template-columns: 1fr 1fr; } .store-price-filter { grid-column: 1 / -1; } }
 @media (max-width: 520px) { .store-hero-content { padding: 40px 20px 35px; } .store-hero h1 { font-size: clamp(35px,9vw,42px); } .store-hero .hero-description { font-size: 14px; } .store-hero-art { display: none; } .store-hero-actions { align-items: flex-start; flex-direction: column; gap: 12px; } .store-trust-row { flex-wrap: wrap; gap: 12px 16px; margin-top: 25px; } .catalog-heading { align-items: flex-start; flex-direction: column; gap: 8px; } .store-filters { grid-template-columns: 1fr; } .store-price-filter { grid-column: auto; } .products-grid { grid-template-columns: 1fr; gap: 13px; } .store-product-visual { height: 230px; } .store-search-shortcut { display: none; } }
@@ -3142,6 +3148,11 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .store-auth-aside > p:not(.eyebrow) { position: relative; z-index: 1; max-width: 330px; color: #b5c3d4; font-size: 13px; line-height: 1.8; }
 .store-auth-graphic { position: absolute; right: -55px; bottom: -45px; display: grid; width: 260px; height: 260px; place-items: center; border: 1px solid rgba(137,175,233,.22); border-radius: 50%; color: rgba(146,184,242,.52); background: radial-gradient(circle,rgba(70,112,177,.2),transparent 68%); }
 .store-auth-form-wrap { display: grid; place-items: center; padding: 42px; }
+/* Margen lateral cuando la pantalla es más estrecha que la tarjeta (antes tocaba los bordes en tablet). */
+.store-auth-page { width: min(1120px, calc(100% - 48px)); }
+/* Con la columna oscura estrecha, el chip decorativo se aparta del texto. */
+@media (max-width: 1000px) { .store-auth-graphic { right: -110px; bottom: -120px; } }
+@media (max-width: 760px) { .store-auth-page { width: auto; } }
 .store-auth-card { width: min(100%,440px); border: 0; box-shadow: none; }
 .store-auth-card { animation: store-enter 300ms ease-out both; }
 .store-auth-card [data-slot="card-header"] { padding: 0 0 25px; }
@@ -3314,6 +3325,17 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .admin-data-table [data-slot="table-head"] { height: 42px; padding: 0 15px; border-bottom: 1px solid #e9edf2; background: #f8fafc; color: #728094; font-size: 10px; font-weight: 650; letter-spacing: .045em; text-transform: uppercase; }
 .admin-data-table [data-slot="table-cell"] { height: 52px; padding: 8px 15px; border-bottom: 1px solid #edf0f4; color: #3d4c60; font-size: 11px; }
 .admin-data-table [data-slot="table-row"]:hover { background: #fafcff; }
+/* AdminTable: la columna del nombre (la segunda en las cuatro tablas: producto, categoría, cliente, usuario) queda fija y hay sombra en el borde por el que hay más contenido. */
+.admin-table-scroll { position: relative; }
+.admin-table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: 28px; background: linear-gradient(to left, rgba(15,30,50,.16), rgba(15,30,50,0)); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.admin-table-scroll[data-sombra-fin]::after { opacity: 1; }
+.admin-table-scroll [data-slot="table-container"] { overscroll-behavior-x: contain; }
+.admin-table-scroll :is(th, td):nth-child(2) { position: sticky; left: 0; z-index: 1; background: #fff; transition: box-shadow .2s ease; }
+.admin-table-scroll th:nth-child(2) { background: #f8fafc; }
+.admin-table-scroll tbody tr:hover > td:nth-child(2) { background: #fafcff; }
+.admin-table-scroll[data-sombra-inicio] :is(th, td):nth-child(2) { box-shadow: 6px 0 8px -6px rgba(15,30,50,.3); }
+/* En móvil la columna fija no puede comerse la pantalla: 150px, con el texto en varias líneas. */
+@media (max-width: 600px) { .admin-table-scroll :is(th, td):nth-child(2) { width: 150px; min-width: 150px; max-width: 150px; white-space: normal; overflow-wrap: anywhere; } .admin-table-scroll .admin-product-name { gap: 8px; } .admin-table-scroll .admin-product-name img { width: 34px; height: 34px; } }
 .admin-data-table .category-name-badge { height: 25px; background: #f2f5f9; color: #53647a; font-size: 10px; }
 .admin-order-state-cell, .admin-user-role-cell { display: flex; align-items: center; gap: 8px; }
 .admin-state-badge, .role-badge { height: 23px; border: 0; font-size: 9px; text-transform: capitalize; }
@@ -3342,6 +3364,8 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 @media (max-width: 560px) { .admin-ai-profile { padding: 14px; } .admin-ai-uses-grid, .admin-ai-attributes-grid { grid-template-columns: 1fr; } }
 .store-detail-layout { grid-template-columns: minmax(0,1.08fr) minmax(360px,.92fr); column-gap: clamp(38px,6vw,82px); row-gap: 28px; }
 .store-detail-info { max-width: 590px; }
+/* Va después de la regla anterior para que no la anule: por debajo de 720px, imagen arriba e información debajo. */
+@media (max-width: 720px) { .store-detail-layout { grid-template-columns: minmax(0,1fr); } .store-detail-info { max-width: none; } }
 .store-detail-stock-badge { margin: 0 0 20px; padding: 6px 10px; font-size: 11px; }
 .store-stock-note { margin-top: 11px; color: #8994a2; font-size: 10px; }
 .store-description-card { grid-column: 1 / -1; padding: 25px 28px; border: 1px solid #e7ecf2; background: white; box-shadow: none; }
@@ -3467,6 +3491,15 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .toaster { --width: 360px; }
 @media (max-width: 1050px) { .admin-workspace { grid-template-columns: 205px minmax(0,1fr); } .admin-metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .admin-dashboard-columns { grid-template-columns: 1fr; } .admin-status-grid { grid-template-columns: repeat(5,minmax(80px,1fr)); overflow-x: auto; } }
 @media (max-width: 760px) { .admin-workspace { display: flex; min-height: calc(100vh - 66px); flex-direction: column; } .admin-sidebar { display: none; } .admin-mobile-header { position: sticky; top: 66px; z-index: 35; display: flex; height: 53px; align-items: center; justify-content: space-between; padding: 0 15px; border-bottom: 1px solid #e5eaf0; background: rgba(255,255,255,.96); color: #34455b; font-size: 12px; font-weight: 650; backdrop-filter: blur(12px); } .admin-mobile-header [data-slot="button"] { width: 33px; height: 33px; } .admin-mobile-header > a { display: grid; width: 33px; height: 33px; place-items: center; color: #536882; } .admin-workspace-content > main.admin-container { min-height: calc(100vh - 119px); } .admin-container { padding: 28px 17px 48px; } .admin-dashboard-heading { align-items: flex-start; } .admin-live-badge { display: none; } .admin-stock-grid { grid-template-columns: 1fr; } }
+/*
+ * La barra lateral es sticky y mide lo que la pantalla. La columna se pinta también en el fondo del
+ * contenedor para que sea continua cuando la página se ve entera (impresión, capturas de página completa).
+ */
+.admin-workspace { --admin-sidebar-ancho: 246px; background: linear-gradient(to right, #fff calc(var(--admin-sidebar-ancho) - 1px), #e5eaf0 calc(var(--admin-sidebar-ancho) - 1px) var(--admin-sidebar-ancho), #f6f8fb var(--admin-sidebar-ancho)); }
+@media (max-width: 1050px) { .admin-workspace { --admin-sidebar-ancho: 205px; } }
+@media (max-width: 760px) { .admin-workspace { background: #f6f8fb; } }
+/* Panel en móvil: una sola cabecera (la del panel). Su menú lleva a «Volver a la tienda». */
+@media (max-width: 760px) { .store-navbar.store-navbar-admin { display: none; } .admin-mobile-header { top: 0; } .admin-workspace { min-height: 100vh; } .admin-workspace-content > main.admin-container { min-height: calc(100vh - 53px); } }
 @media (max-width: 560px) { .admin-metric-grid { gap: 9px; } .admin-metric-card { padding: 12px; } .admin-metric-card [data-slot="card-title"] { font-size: 9px; } .admin-metric-icon { width: 29px; height: 29px; } .admin-metric-card [data-slot="card-content"] > strong { font-size: 22px; } .admin-status-grid { grid-template-columns: repeat(2,minmax(0,1fr)); overflow: visible; } .admin-status-tile:last-child { grid-column: 1 / -1; } .admin-dashboard-panel [data-slot="card-header"] { align-items: flex-start; gap: 10px; padding: 15px; } .admin-dashboard-panel [data-slot="card-content"] { padding: 0 15px 15px; } .admin-edit-dialog .admin-form-card { padding: 20px 16px; } .admin-edit-dialog .admin-form-grid { grid-template-columns: 1fr; } .admin-edit-dialog .admin-form-full { grid-column: auto; } .admin-category-dialog .admin-form-actions { flex-direction: column-reverse; } .admin-category-dialog .admin-form-actions button { width: 100%; } .store-description-card { padding: 19px; } .store-description-card > p:last-child { font-size: 13px; } }
 @media (prefers-reduced-motion: reduce) { .admin-metric-card, .store-description-card, .store-detail-gallery, .store-detail-info { animation: none; } .store-detail-gallery > img { transition: none; } }
 
@@ -3606,39 +3639,9 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   transform: translateX(2px);
 }
 
-.home-page .home-scroll-reveal {
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 440ms ease, transform 440ms ease;
-}
-
-.home-page .home-scroll-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.home-page .home-search-reveal {
-  transition-delay: 45ms;
-}
-
-.home-page .store-filters.home-scroll-reveal {
-  transition-delay: 85ms;
-}
-
+/* El catálogo se ve en cuanto se llega a él: sin animaciones que dependan del scroll. */
 .home-page .store-product-enter {
   animation: none;
-}
-
-.home-page .home-product-reveal {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 360ms ease, transform 360ms ease;
-  transition-delay: calc(var(--home-product-order, 0) * 45ms);
-}
-
-.home-page .home-product-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .home-page .store-product-bottom [data-slot='button'] svg {
@@ -3701,9 +3704,7 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   .home-page .store-hero-copy > *,
   .home-page .store-hero-title-line,
   .home-page .store-trust-row > span,
-  .home-page .store-art-chip,
-  .home-page .home-scroll-reveal,
-  .home-page .home-product-reveal {
+  .home-page .store-art-chip {
     animation: none;
     opacity: 1;
     transform: none;
@@ -3869,6 +3870,20 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .order-detail-table-product strong {
   color: #33445a;
   font-size: 11px;
+}
+
+/* En móvil cada línea del pedido es una tarjeta con todos sus datos, sin scroll horizontal. */
+@media (max-width: 600px) {
+  .order-detail-table { min-width: 0; }
+  .order-detail-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .order-detail-table tbody { display: grid; gap: 10px; padding: 12px 0; }
+  .order-detail-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; padding: 12px; border: 1px solid #e7ecf2; border-radius: 10px; }
+  .order-detail-table tr:hover { background: transparent; }
+  .order-detail-table td { display: grid; gap: 3px; height: auto; padding: 0; border: 0; color: #33445a; font-weight: 600; white-space: normal; }
+  .order-detail-table td[data-label]::before { content: attr(data-label); color: #788598; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .order-detail-table .order-detail-table-product-cell { grid-column: 1 / -1; }
+  .order-detail-table-product { min-width: 0; }
+  .order-detail-table-product strong { font-size: 13px; }
 }
 
 .order-detail-total-row {
@@ -4239,8 +4254,197 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   }
 }
 
+/*
+ * El asistente no tapa contenido: queda por debajo de los menús laterales (z-index 50)
+ * y por encima de la barra (40), se oculta mientras hay un menú abierto y la página
+ * reserva espacio al final para que el botón no tape el pie.
+ */
+.recommendation-assistant-trigger,
+.recommendation-assistant-panel {
+  z-index: 45;
+}
+
+body:has([data-slot='sheet-content']) .recommendation-assistant-trigger,
+body:has([data-slot='sheet-content']) .recommendation-assistant-panel {
+  visibility: hidden;
+}
+
+body:has(.recommendation-assistant-trigger) .footer {
+  padding-bottom: calc(40px + 72px + env(safe-area-inset-bottom));
+}
+
+/* Con filas «auto», el height: 100% de la imagen no tenía referencia y se recortaba. */
+.recommendation-product-visual {
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
+
+/* Escritorio y tablet: el panel no sube por encima de la cabecera (76px) ni tapa el botón. */
+.recommendation-assistant-panel {
+  max-height: min(720px, calc(100dvh - 76px - 16px - 84px));
+}
+
+/* Móvil: pantalla completa (el panel trae su botón de cerrar) y tarjetas compactas. */
+@media (max-width: 600px) {
+  .recommendation-assistant-panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .recommendation-assistant-panel-content {
+    flex: 1;
+  }
+
+  .recommendation-assistant-panel:not([hidden]) + .recommendation-assistant-trigger {
+    display: none;
+  }
+
+  body:has(.recommendation-assistant-panel:not([hidden])) {
+    overflow: hidden;
+  }
+
+  .recommendation-product-card[data-slot='card'] {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .recommendation-product-visual {
+    height: auto;
+    min-height: 92px;
+  }
+
+  .recommendation-product-visual > img {
+    padding: 8px;
+  }
+
+  .recommendation-product-info {
+    gap: 6px;
+    padding: 10px 12px 12px;
+  }
+
+  .recommendation-product-name {
+    font-size: 13px;
+  }
+
+  .recommendation-product-price {
+    font-size: 16px;
+  }
+
+  .recommendation-product-reason {
+    font-size: 11.5px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .recommendation-assistant-panel {
     animation: none;
   }
+}
+
+/*
+ * Zonas táctiles de al menos 44 × 44 px en móvil (WCAG 2.5.5). Los botones, campos y
+ * selectores crecen; los enlaces de texto ganan altura sin cambiar su aspecto.
+ */
+@media (max-width: 760px) {
+  /*
+   * !important a propósito: es un mínimo de accesibilidad acotado al móvil y varias reglas
+   * de página (acciones de tabla, formulario del asistente…) fijan alturas más específicas.
+   * Los disparadores de base-ui cambian el data-slot del botón, por eso se listan aparte.
+   */
+  :is([data-slot='button'], [data-slot='select-trigger'], [data-slot='pagination-link'],
+    [data-slot='sheet-trigger'], [data-slot='sheet-close'], [data-slot='dialog-trigger'],
+    [data-slot='dialog-close'], [data-slot='alert-dialog-trigger'], [data-slot='alert-dialog-action'],
+    [data-slot='alert-dialog-cancel']) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  [data-slot='input'] {
+    min-height: 44px;
+  }
+
+  .admin-quicklinks [data-slot='card-content'] a {
+    min-height: 44px;
+  }
+
+  /* La X de los avisos es de 20px: su zona táctil se amplía sin cambiar su aspecto. */
+  [data-sonner-toast] [data-close-button]::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+
+  .store-back-link,
+  .continue-shopping,
+  .store-auth-switch a,
+  .store-cart-product-info > a,
+  .admin-back-store {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .store-back-link,
+  .continue-shopping {
+    margin-bottom: 10px;
+  }
+
+  .store-auth-switch a {
+    padding-inline: 4px;
+  }
+
+  /* El nombre del producto va en su propia línea, debajo de la categoría. */
+  .store-cart-product-info > a {
+    display: flex;
+  }
+
+  /* Estos dos recortan el texto con -webkit-box: solo se les da altura mínima. */
+  .store-logo,
+  .store-product-title,
+  .recommendation-product-name,
+  .store-mobile-nav a,
+  .admin-sidebar-links .admin-nav-link {
+    min-height: 44px;
+  }
+
+  .admin-mobile-header > a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-mobile-header [data-slot='button'] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-mobile-header {
+    height: 60px;
+  }
+
+  .admin-workspace-content > main.admin-container {
+    min-height: calc(100vh - 60px);
+  }
+
+  /* El tirador del rango de precio es de 12px; su zona táctil (::after) pasa de 28 a 44px. */
+  [data-slot='slider-thumb']::after {
+    inset: -16px;
+  }
+}
+
+/* El pie queda al final de la pantalla aunque la página sea corta. */
+#root {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.app-content {
+  display: flow-root;
+  flex: 1 0 auto;
 }

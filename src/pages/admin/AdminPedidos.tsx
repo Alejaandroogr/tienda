@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Table } from '../../components/ui/table';
+import AdminTable from '../../components/admin/AdminTable';
 import { toast } from 'sonner';
 
 interface PedidoAdmin {
@@ -25,6 +25,12 @@ const estados = [
   'entregado',
   'cancelado',
 ];
+
+const etiquetaEstado = (estado: string) => estado.charAt(0).toUpperCase() + estado.slice(1);
+
+// Con items, SelectValue muestra la etiqueta y no el valor interno.
+const opcionesEstado = estados.map((estado) => ({ label: etiquetaEstado(estado), value: estado }));
+const opcionesFiltroEstado = [{ label: 'Todos los estados', value: 'todos' }, ...opcionesEstado];
 
 // Debe coincidir con TRANSICIONES_PEDIDO de backend/pedidos/estados_pedido.php.
 const TRANSICIONES_PEDIDO: Record<string, readonly string[]> = {
@@ -276,11 +282,10 @@ function AdminPedidos() {
             onChange={cambiarBusqueda}
           />
 
-          <Select value={estadoFiltro || 'todos'} onValueChange={(value) => { setEstadoFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
-            <SelectTrigger className="admin-filter-select"><SelectValue /></SelectTrigger>
+          <Select items={opcionesFiltroEstado} value={estadoFiltro || 'todos'} onValueChange={(value) => { setEstadoFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
+            <SelectTrigger className="admin-filter-select" aria-label="Filtrar por estado"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos los estados</SelectItem>
-              {estados.map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}
+              {opcionesFiltroEstado.map((opcion) => <SelectItem key={opcion.value} value={opcion.value}>{opcion.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -299,7 +304,7 @@ function AdminPedidos() {
         ) : (
           <>
             <div className="admin-table-wrapper">
-              <Table className="admin-products-table">
+              <AdminTable className="admin-products-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -347,20 +352,20 @@ function AdminPedidos() {
                       <td>
                         <div className="admin-order-state-cell">
                         <Badge variant={pedido.estado === 'cancelado' ? 'destructive' : pedido.estado === 'entregado' ? 'secondary' : pedido.estado === 'enviado' ? 'default' : 'outline'} className={`admin-state-badge state-${pedido.estado}`}>{pedido.estado}</Badge>
-                        <Select value={pedido.estado} onValueChange={(value) => { if (value && value !== pedido.estado) void cambiarEstado(pedido.id, value); }}>
+                        <Select items={opcionesEstado} value={pedido.estado} onValueChange={(value) => { if (value && value !== pedido.estado) void cambiarEstado(pedido.id, value); }}>
                           <SelectTrigger
                             className={`admin-order-status status-${pedido.estado}`}
                             disabled={actualizandoId === pedido.id || (TRANSICIONES_PEDIDO[pedido.estado] ?? []).length === 0}
                             title={(TRANSICIONES_PEDIDO[pedido.estado] ?? []).length === 0 ? `Un pedido ${pedido.estado} no puede cambiar de estado` : undefined}
                           ><SelectValue /></SelectTrigger>
-                          <SelectContent>{estadosDisponibles(pedido.estado).map((estado) => <SelectItem key={estado} value={estado}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</SelectItem>)}</SelectContent>
+                          <SelectContent>{estadosDisponibles(pedido.estado).map((estado) => <SelectItem key={estado} value={estado}>{etiquetaEstado(estado)}</SelectItem>)}</SelectContent>
                         </Select>
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </Table>
+              </AdminTable>
             </div>
 
             <AdminPagination

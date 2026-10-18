@@ -9,7 +9,7 @@ import AdminPagination from '../../components/admin/AdminPagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { Table } from '../../components/ui/table';
+import AdminTable from '../../components/admin/AdminTable';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
@@ -617,7 +617,7 @@ function AdminCategorias() {
 
               <div className="admin-products-table">
 
-                <Table className="admin-data-table">
+                <AdminTable className="admin-data-table">
 
                   <thead>
 
@@ -702,7 +702,7 @@ function AdminCategorias() {
 
                   </tbody>
 
-                </Table>
+                </AdminTable>
 
               </div>
 

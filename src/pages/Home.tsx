@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowDown,
   ArrowUpDown,
@@ -39,10 +34,6 @@ const opcionesOrden = [
 ];
 
 function Home() {
-  const catalogHeadingRef = useRef<HTMLDivElement>(null);
-  const searchSectionRef = useRef<HTMLDivElement>(null);
-  const filtersRef = useRef<HTMLElement>(null);
-  const productsGridRef = useRef<HTMLDivElement>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [orden, setOrden] = useState('recomendados');
@@ -121,46 +112,6 @@ function Home() {
   const indiceInicio = (paginaActual - 1) * productosPorPagina;
   const indiceFin = indiceInicio + productosPorPagina;
   const productosPagina = productosOrdenados.slice(indiceInicio, indiceFin);
-  const identificadoresProductos = productosPagina
-    .map((producto) => producto.id)
-    .join(',');
-
-  useEffect(() => {
-    const revealTargets = [
-      catalogHeadingRef.current,
-      searchSectionRef.current,
-      filtersRef.current,
-      productsGridRef.current,
-      ...(productsGridRef.current
-        ? Array.from(
-            productsGridRef.current.querySelectorAll<HTMLElement>(
-              '.store-product-enter',
-            ),
-          )
-        : []),
-    ].filter((target): target is HTMLElement => target !== null);
-
-    if (!('IntersectionObserver' in window)) {
-      revealTargets.forEach((target) => target.classList.add('is-visible'));
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.08, rootMargin: '0px 0px -24px 0px' },
-    );
-
-    revealTargets.forEach((target) => observer.observe(target));
-
-    return () => observer.disconnect();
-  }, [cargando, identificadoresProductos, paginaActual]);
 
   const reiniciarPagina = () => setPaginaSeleccionada(1);
 
@@ -198,7 +149,7 @@ function Home() {
     <div className="home-page">
       <Hero />
       <main className="store-catalog" id="productos">
-        <div className="catalog-heading home-scroll-reveal" ref={catalogHeadingRef}>
+        <div className="catalog-heading">
           <div>
             <p className="eyebrow">SELECCIÓN TECHSTORE</p>
             <h2>Encuentra tu próximo upgrade</h2>
@@ -213,14 +164,11 @@ function Home() {
           </span>
         </div>
 
-        <div className="home-search-reveal home-scroll-reveal" ref={searchSectionRef}>
-          <SearchBar valor={busqueda} alBuscar={manejarBusqueda} />
-        </div>
+        <SearchBar valor={busqueda} alBuscar={manejarBusqueda} />
 
         <section
-          className="filters store-filters home-scroll-reveal"
+          className="filters store-filters"
           aria-label="Filtros de productos"
-          ref={filtersRef}
         >
           <div className="store-filter-control">
             <label>
@@ -319,17 +267,9 @@ function Home() {
           </div>
         ) : productosFiltrados.length > 0 ? (
           <>
-            <div className="products-grid home-scroll-reveal" ref={productsGridRef}>
-              {productosPagina.map((producto, index) => (
-                <div
-                  className="store-product-enter home-product-reveal"
-                  style={
-                    {
-                      '--home-product-order': Math.min(index, 2),
-                    } as CSSProperties
-                  }
-                  key={producto.id}
-                >
+            <div className="products-grid">
+              {productosPagina.map((producto) => (
+                <div className="store-product-enter" key={producto.id}>
                   <ProductCard producto={producto} />
                 </div>
               ))}
