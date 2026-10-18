@@ -246,13 +246,13 @@ function AdminPedidos() {
     <main className="admin-container">
       <div className="admin-header">
         <div>
-          <p className="admin-eyebrow">
+          <p className="admin-subtitle">
             ADMINISTRACIÓN
           </p>
 
           <h1>Pedidos</h1>
 
-          <p className="admin-subtitle">
+          <p>
             Gestiona los pedidos realizados por los
             clientes.
           </p>

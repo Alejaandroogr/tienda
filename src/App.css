@@ -2121,7 +2121,8 @@ main {
 }
 
 .admin-section-header h2 {
-  margin: 0 0 25px;
+  /* Sin margen propio: el de .admin-section-header ya separa el título de los filtros. */
+  margin: 0;
   font-size: 24px;
 }
 
@@ -3321,6 +3322,10 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .admin-category-dialog .admin-form-grid { grid-template-columns: 1fr; }
 .admin-category-dialog .admin-form-full { grid-column: auto; }
 .admin-filter-select { width: min(260px,100%); height: 40px; border-color: #e0e6ed; background: white; font-size: 12px; }
+/* En móvil los filtros van en columna: el selector ocupa el mismo ancho que el buscador. */
+@media (max-width: 700px) { .admin-filter-select { width: 100%; } }
+/* Contador de la cabecera (pedidos): separado del subtítulo. */
+.admin-header > .admin-order-count { margin-top: 14px; }
 .admin-data-table { min-width: 700px; border-collapse: collapse; }
 .admin-data-table [data-slot="table-head"] { height: 42px; padding: 0 15px; border-bottom: 1px solid #e9edf2; background: #f8fafc; color: #728094; font-size: 10px; font-weight: 650; letter-spacing: .045em; text-transform: uppercase; }
 .admin-data-table [data-slot="table-cell"] { height: 52px; padding: 8px 15px; border-bottom: 1px solid #edf0f4; color: #3d4c60; font-size: 11px; }
