@@ -3320,6 +3320,15 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .admin-data-table [data-slot="table-head"] { height: 42px; padding: 0 15px; border-bottom: 1px solid #e9edf2; background: #f8fafc; color: #728094; font-size: 10px; font-weight: 650; letter-spacing: .045em; text-transform: uppercase; }
 .admin-data-table [data-slot="table-cell"] { height: 52px; padding: 8px 15px; border-bottom: 1px solid #edf0f4; color: #3d4c60; font-size: 11px; }
 .admin-data-table [data-slot="table-row"]:hover { background: #fafcff; }
+/* AdminTable: primera columna fija y sombra en el borde por el que hay más contenido. */
+.admin-table-scroll { position: relative; }
+.admin-table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: 28px; background: linear-gradient(to left, rgba(15,30,50,.16), rgba(15,30,50,0)); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.admin-table-scroll[data-sombra-fin]::after { opacity: 1; }
+.admin-table-scroll [data-slot="table-container"] { overscroll-behavior-x: contain; }
+.admin-table-scroll :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: #fff; transition: box-shadow .2s ease; }
+.admin-table-scroll th:first-child { background: #f8fafc; }
+.admin-table-scroll tbody tr:hover > td:first-child { background: #fafcff; }
+.admin-table-scroll[data-sombra-inicio] :is(th, td):first-child { box-shadow: 6px 0 8px -6px rgba(15,30,50,.3); }
 .admin-data-table .category-name-badge { height: 25px; background: #f2f5f9; color: #53647a; font-size: 10px; }
 .admin-order-state-cell, .admin-user-role-cell { display: flex; align-items: center; gap: 8px; }
 .admin-state-badge, .role-badge { height: 23px; border: 0; font-size: 9px; text-transform: capitalize; }
@@ -3877,6 +3886,20 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .order-detail-table-product strong {
   color: #33445a;
   font-size: 11px;
+}
+
+/* En móvil cada línea del pedido es una tarjeta con todos sus datos, sin scroll horizontal. */
+@media (max-width: 600px) {
+  .order-detail-table { min-width: 0; }
+  .order-detail-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .order-detail-table tbody { display: grid; gap: 10px; padding: 12px 0; }
+  .order-detail-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; padding: 12px; border: 1px solid #e7ecf2; border-radius: 10px; }
+  .order-detail-table tr:hover { background: transparent; }
+  .order-detail-table td { display: grid; gap: 3px; height: auto; padding: 0; border: 0; color: #33445a; font-weight: 600; white-space: normal; }
+  .order-detail-table td[data-label]::before { content: attr(data-label); color: #788598; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+  .order-detail-table .order-detail-table-product-cell { grid-column: 1 / -1; }
+  .order-detail-table-product { min-width: 0; }
+  .order-detail-table-product strong { font-size: 13px; }
 }
 
 .order-detail-total-row {

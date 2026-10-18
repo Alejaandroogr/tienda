@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Table } from '../../components/ui/table';
+import AdminTable from '../../components/admin/AdminTable';
 import { toast } from 'sonner';
 
 interface UsuarioAdmin {
@@ -396,7 +396,7 @@ function AdminUsuarios() {
 
               <div className="admin-products-table">
 
-                <Table className="admin-data-table">
+                <AdminTable className="admin-data-table">
 
                   <thead>
 
@@ -483,7 +483,7 @@ function AdminUsuarios() {
 
                   </tbody>
 
-                </Table>
+                </AdminTable>
 
               </div>
 

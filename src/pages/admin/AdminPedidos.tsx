@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import { Table } from '../../components/ui/table';
+import AdminTable from '../../components/admin/AdminTable';
 import { toast } from 'sonner';
 
 interface PedidoAdmin {
@@ -299,7 +299,7 @@ function AdminPedidos() {
         ) : (
           <>
             <div className="admin-table-wrapper">
-              <Table className="admin-products-table">
+              <AdminTable className="admin-products-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -360,7 +360,7 @@ function AdminPedidos() {
                     </tr>
                   ))}
                 </tbody>
-              </Table>
+              </AdminTable>
             </div>
 
             <AdminPagination
