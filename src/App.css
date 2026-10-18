@@ -4259,6 +4259,73 @@ body:has(.recommendation-assistant-trigger) .footer {
   padding-bottom: calc(40px + 72px + env(safe-area-inset-bottom));
 }
 
+/* Con filas «auto», el height: 100% de la imagen no tenía referencia y se recortaba. */
+.recommendation-product-visual {
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
+
+/* Escritorio y tablet: el panel no sube por encima de la cabecera (76px) ni tapa el botón. */
+.recommendation-assistant-panel {
+  max-height: min(720px, calc(100dvh - 76px - 16px - 84px));
+}
+
+/* Móvil: pantalla completa (el panel trae su botón de cerrar) y tarjetas compactas. */
+@media (max-width: 600px) {
+  .recommendation-assistant-panel {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .recommendation-assistant-panel-content {
+    flex: 1;
+  }
+
+  .recommendation-assistant-panel:not([hidden]) + .recommendation-assistant-trigger {
+    display: none;
+  }
+
+  body:has(.recommendation-assistant-panel:not([hidden])) {
+    overflow: hidden;
+  }
+
+  .recommendation-product-card[data-slot='card'] {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .recommendation-product-visual {
+    height: auto;
+    min-height: 92px;
+  }
+
+  .recommendation-product-visual > img {
+    padding: 8px;
+  }
+
+  .recommendation-product-info {
+    gap: 6px;
+    padding: 10px 12px 12px;
+  }
+
+  .recommendation-product-name {
+    font-size: 13px;
+  }
+
+  .recommendation-product-price {
+    font-size: 16px;
+  }
+
+  .recommendation-product-reason {
+    font-size: 11.5px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .recommendation-assistant-panel {
     animation: none;
