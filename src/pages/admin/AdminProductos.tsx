@@ -792,6 +792,10 @@ function AdminProductos() {
             />
 
             <Select
+              items={[
+                { label: 'Todas las categorías', value: 'todas' },
+                ...categorias.map((categoria) => ({ label: categoria.nombre, value: categoria.nombre })),
+              ]}
               value={categoriaFiltro || 'todas'}
               onValueChange={(value) => {
                 setCategoriaFiltro(
@@ -900,6 +904,7 @@ function AdminProductos() {
                     </Label>
 
                     <Select
+                      items={categorias.map((categoria) => ({ label: categoria.nombre, value: String(categoria.id) }))}
                       value={categoriaId || null}
                       onValueChange={(value) => cambiarCategoriaFormulario(value ?? '')}
                       disabled={estadoPerfil === 'cargando'}

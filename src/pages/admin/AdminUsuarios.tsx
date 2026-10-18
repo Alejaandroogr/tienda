@@ -20,6 +20,17 @@ interface UsuarioAdmin {
   creado_en: string;
 }
 
+// Con items, SelectValue muestra la etiqueta y no el valor interno.
+const opcionesRol = [
+  { label: 'Cliente', value: 'cliente' },
+  { label: 'Administrador', value: 'admin' },
+];
+const opcionesFiltroRol = [
+  { label: 'Todos los roles', value: 'todos' },
+  { label: 'Clientes', value: 'cliente' },
+  { label: 'Administradores', value: 'admin' },
+];
+
 function AdminUsuarios() {
   const { usuario } = useAuth();
 
@@ -362,9 +373,9 @@ function AdminUsuarios() {
               onChange={cambiarBusqueda}
             />
 
-            <Select value={rolFiltro || 'todos'} onValueChange={(value) => { setRolFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
-              <SelectTrigger className="admin-filter-select"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="todos">Todos los roles</SelectItem><SelectItem value="cliente">Clientes</SelectItem><SelectItem value="admin">Administradores</SelectItem></SelectContent>
+            <Select items={opcionesFiltroRol} value={rolFiltro || 'todos'} onValueChange={(value) => { setRolFiltro(!value || value === 'todos' ? '' : value); setPaginaActual(1); }}>
+              <SelectTrigger className="admin-filter-select" aria-label="Filtrar por rol"><SelectValue /></SelectTrigger>
+              <SelectContent>{opcionesFiltroRol.map((opcion) => <SelectItem key={opcion.value} value={opcion.value}>{opcion.label}</SelectItem>)}</SelectContent>
             </Select>
 
           </div>
@@ -467,9 +478,9 @@ function AdminUsuarios() {
 
                             <div className="admin-user-role-cell">
                               <Badge variant={usuarioActual.rol === 'admin' ? 'default' : 'secondary'} className={`role-badge role-${usuarioActual.rol}`}>{usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</Badge>
-                              <Select value={usuarioActual.rol} disabled={usuarioActual.id === usuario.id || actualizandoId === usuarioActual.id} onValueChange={(value) => { if (value === 'cliente' || value === 'admin') void cambiarRol(usuarioActual.id, value); }}>
+                              <Select items={opcionesRol} value={usuarioActual.rol} disabled={usuarioActual.id === usuario.id || actualizandoId === usuarioActual.id} onValueChange={(value) => { if (value === 'cliente' || value === 'admin') void cambiarRol(usuarioActual.id, value); }}>
                                 <SelectTrigger className="admin-role-select" aria-label={`Cambiar rol de ${usuarioActual.nombre}`}><SelectValue /></SelectTrigger>
-                                <SelectContent><SelectItem value="cliente">Cliente</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent>
+                                <SelectContent>{opcionesRol.map((opcion) => <SelectItem key={opcion.value} value={opcion.value}>{opcion.label}</SelectItem>)}</SelectContent>
                               </Select>
                               {usuarioActual.id === usuario.id && <small className="admin-self-role-note">Tu cuenta</small>}
                             </div>
