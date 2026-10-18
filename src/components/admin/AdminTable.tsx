@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { cn } from 'cn';
 
 /**
- * Tabla del panel con scroll horizontal visible: la primera columna queda fija y
+ * Tabla del panel con scroll horizontal visible: la columna del nombre (la segunda) queda fija y
  * aparece una sombra en el borde por el que queda contenido oculto.
  */
 function AdminTable({ className, ...props }: ComponentProps<'table'>) {

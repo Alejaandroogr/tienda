@@ -3325,15 +3325,17 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .admin-data-table [data-slot="table-head"] { height: 42px; padding: 0 15px; border-bottom: 1px solid #e9edf2; background: #f8fafc; color: #728094; font-size: 10px; font-weight: 650; letter-spacing: .045em; text-transform: uppercase; }
 .admin-data-table [data-slot="table-cell"] { height: 52px; padding: 8px 15px; border-bottom: 1px solid #edf0f4; color: #3d4c60; font-size: 11px; }
 .admin-data-table [data-slot="table-row"]:hover { background: #fafcff; }
-/* AdminTable: primera columna fija y sombra en el borde por el que hay más contenido. */
+/* AdminTable: la columna del nombre (la segunda en las cuatro tablas: producto, categoría, cliente, usuario) queda fija y hay sombra en el borde por el que hay más contenido. */
 .admin-table-scroll { position: relative; }
 .admin-table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: 28px; background: linear-gradient(to left, rgba(15,30,50,.16), rgba(15,30,50,0)); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
 .admin-table-scroll[data-sombra-fin]::after { opacity: 1; }
 .admin-table-scroll [data-slot="table-container"] { overscroll-behavior-x: contain; }
-.admin-table-scroll :is(th, td):first-child { position: sticky; left: 0; z-index: 1; background: #fff; transition: box-shadow .2s ease; }
-.admin-table-scroll th:first-child { background: #f8fafc; }
-.admin-table-scroll tbody tr:hover > td:first-child { background: #fafcff; }
-.admin-table-scroll[data-sombra-inicio] :is(th, td):first-child { box-shadow: 6px 0 8px -6px rgba(15,30,50,.3); }
+.admin-table-scroll :is(th, td):nth-child(2) { position: sticky; left: 0; z-index: 1; background: #fff; transition: box-shadow .2s ease; }
+.admin-table-scroll th:nth-child(2) { background: #f8fafc; }
+.admin-table-scroll tbody tr:hover > td:nth-child(2) { background: #fafcff; }
+.admin-table-scroll[data-sombra-inicio] :is(th, td):nth-child(2) { box-shadow: 6px 0 8px -6px rgba(15,30,50,.3); }
+/* En móvil la columna fija no puede comerse la pantalla: 150px, con el texto en varias líneas. */
+@media (max-width: 600px) { .admin-table-scroll :is(th, td):nth-child(2) { width: 150px; min-width: 150px; max-width: 150px; white-space: normal; overflow-wrap: anywhere; } .admin-table-scroll .admin-product-name { gap: 8px; } .admin-table-scroll .admin-product-name img { width: 34px; height: 34px; } }
 .admin-data-table .category-name-badge { height: 25px; background: #f2f5f9; color: #53647a; font-size: 10px; }
 .admin-order-state-cell, .admin-user-role-cell { display: flex; align-items: center; gap: 8px; }
 .admin-state-badge, .role-badge { height: 23px; border: 0; font-size: 9px; text-transform: capitalize; }
