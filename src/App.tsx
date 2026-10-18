@@ -42,6 +42,8 @@ function App() {
           <Toaster />
           <Navbar />
 
+          {/* Ocupa el alto sobrante para que el pie quede abajo en las páginas cortas. */}
+          <div className="app-content">
           <Suspense fallback={<CargandoPagina />}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -62,6 +64,7 @@ function App() {
               </Route>
             </Routes>
           </Suspense>
+          </div>
 
           <Footer />
         </BrowserRouter>

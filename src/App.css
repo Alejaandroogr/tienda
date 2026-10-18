@@ -4433,3 +4433,16 @@ body:has(.recommendation-assistant-trigger) .footer {
     inset: -16px;
   }
 }
+
+/* El pie queda al final de la pantalla aunque la página sea corta. */
+#root {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.app-content {
+  display: flow-root;
+  flex: 1 0 auto;
+}
