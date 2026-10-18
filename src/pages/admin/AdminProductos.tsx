@@ -11,7 +11,7 @@ import AdminPagination from '../../components/admin/AdminPagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import AdminTable from '../../components/admin/AdminTable';
+import TablaAdaptable from '../../components/TablaAdaptable';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -1115,7 +1115,7 @@ function AdminProductos() {
 
               <div className="admin-products-table">
 
-                <AdminTable>
+                <TablaAdaptable>
 
                   <thead>
 
@@ -1158,11 +1158,11 @@ function AdminProductos() {
                           key={producto.id}
                         >
 
-                          <td>
+                          <td data-label="ID">
                             #{producto.id}
                           </td>
 
-                          <td>
+                          <td data-label="Producto">
 
                             <div className="admin-product-name">
 
@@ -1181,11 +1181,11 @@ function AdminProductos() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Categoría">
                             {producto.categoria}
                           </td>
 
-                          <td>
+                          <td data-label="Precio">
 
                             {Number(
                               producto.precio
@@ -1193,7 +1193,7 @@ function AdminProductos() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Stock">
 
                               <Badge variant="outline"
                               className={
@@ -1213,7 +1213,7 @@ function AdminProductos() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Acciones">
 
                             <div className="admin-product-actions">
 
@@ -1259,7 +1259,7 @@ function AdminProductos() {
 
                   </tbody>
 
-                </AdminTable>
+                </TablaAdaptable>
 
               </div>
 
