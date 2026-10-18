@@ -3342,6 +3342,8 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 @media (max-width: 560px) { .admin-ai-profile { padding: 14px; } .admin-ai-uses-grid, .admin-ai-attributes-grid { grid-template-columns: 1fr; } }
 .store-detail-layout { grid-template-columns: minmax(0,1.08fr) minmax(360px,.92fr); column-gap: clamp(38px,6vw,82px); row-gap: 28px; }
 .store-detail-info { max-width: 590px; }
+/* Va después de la regla anterior para que no la anule: por debajo de 720px, imagen arriba e información debajo. */
+@media (max-width: 720px) { .store-detail-layout { grid-template-columns: minmax(0,1fr); } .store-detail-info { max-width: none; } }
 .store-detail-stock-badge { margin: 0 0 20px; padding: 6px 10px; font-size: 11px; }
 .store-stock-note { margin-top: 11px; color: #8994a2; font-size: 10px; }
 .store-description-card { grid-column: 1 / -1; padding: 25px 28px; border: 1px solid #e7ecf2; background: white; box-shadow: none; }
