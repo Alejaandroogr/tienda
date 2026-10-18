@@ -1,3 +1,11 @@
+/**
+ * Campos del perfil de recomendación dentro del formulario de producto del panel:
+ * valoración de cada uso y especificaciones conocidas, según la categoría.
+ *
+ * Es un componente controlado: recibe el perfil y devuelve uno nuevo en cada cambio.
+ * Las reglas (qué campos tiene cada categoría y cómo se aplica un cambio) están en
+ * perfilRecomendacionService.
+ */
 import type { ChangeEvent } from 'react';
 import type { CampoAtributoPerfil, EstadoUso, PerfilRecomendacion } from '../../types/PerfilRecomendacion';
 import {
@@ -19,6 +27,8 @@ interface Props {
 export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props) {
   const campos = obtenerCamposAtributoCategoria(categoria);
   const camposUso = obtenerCamposUsoCategoria(categoria);
+  // Solo los valores válidos para la categoría actual: si el producto cambia de categoría
+  // en el formulario, no se muestran los atributos de la anterior.
   const atributos = filtrarAtributosPerfil(perfil.atributos, categoria) as Record<string, unknown>;
   const usos = filtrarUsosPerfil(perfil.usos, categoria);
 
@@ -26,6 +36,7 @@ export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props
     campo: CampoAtributoPerfil,
     evento: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
+    // Del valor del control al tipo del esquema. Vacío («Desconocido») es undefined: sin dato.
     const valor = evento.target.value;
     let convertido: unknown = valor;
 
@@ -42,6 +53,7 @@ export function PerfilRecomendacionFields({ categoria, perfil, onChange }: Props
     onChange(aplicarCambioAtributo(perfil, campo, convertido));
   };
 
+  // «Sin valorar» (valor vacío) no está en ESTADOS_USO: queda undefined y el uso se quita del perfil.
   const cambiarUso = (clave: string, valor: string) => {
     const estado = ESTADOS_USO.find((opcion) => opcion.valor === valor)?.valor;
     onChange(aplicarCambioUso(perfil, clave, estado as EstadoUso | undefined));

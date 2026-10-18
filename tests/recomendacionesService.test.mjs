@@ -1,3 +1,8 @@
+/**
+ * Tests de src/services/recomendacionesService.ts con fetch simulado: qué respuestas
+ * del backend se aceptan o se rechazan, cómo se convierten los errores y qué se envía.
+ * Node ejecuta el .ts directamente (eliminación de tipos). Uso: node --test tests/*.test.mjs
+ */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {

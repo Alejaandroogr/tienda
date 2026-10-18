@@ -1,3 +1,11 @@
+/**
+ * Perfil de recomendación en el panel de administración: copia del esquema de cada
+ * categoría para pintar el formulario, normalización de lo que se escribe y llamadas
+ * a backend/productos/perfil-ia.php.
+ *
+ * El backend vuelve a validar todo al guardar; aquí solo se evita mostrar o enviar
+ * valores que de todas formas rechazaría.
+ */
 import type {
   AtributosPerfil,
   CampoAtributoPerfil,
@@ -17,7 +25,8 @@ const nivelesRendimiento = [
   { valor: 'alta', etiqueta: 'Alta' },
 ];
 
-// Debe coincidir con esquemaPerfilPorCategoria() de backend/productos/perfil_recomendacion.php.
+// Debe coincidir con esquemaPerfilPorCategoria() de backend/productos/perfil_recomendacion.php
+// (lo comprueba tests/perfilRecomendacionService.test.mjs). «paso» admite decimales; sin él, enteros.
 const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]> = {
   portatiles: [
     { clave: 'cpu_modelo', etiqueta: 'Modelo de CPU', tipo: 'texto' },
@@ -90,6 +99,7 @@ const camposPorCategoria: Record<CategoriaPerfil, readonly CampoAtributoPerfil[]
   ],
 };
 
+// Etiquetas del panel. Las que ve el cliente («para jugar») están en backend/recomendaciones/recomendaciones_usos.php.
 const ETIQUETAS_USO: Record<string, string> = {
   gaming: 'Gaming',
   programacion: 'Programación',
@@ -126,6 +136,10 @@ export const ESTADOS_USO: readonly { valor: EstadoUso; etiqueta: string }[] = [
 
 export const PERFIL_VACIO: PerfilRecomendacion = { usos: {}, atributos: {} };
 
+/**
+ * Clave del esquema para el nombre de una categoría («Tarjetas gráficas» → «tarjetas graficas»),
+ * o null si la categoría no admite perfil. NFD separa las tildes y la expresión las elimina.
+ */
 export function normalizarCategoriaPerfil(nombre: string): CategoriaPerfil | null {
   const normalizada = nombre.toLocaleLowerCase('es').normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   const categorias = Object.keys(camposPorCategoria) as CategoriaPerfil[];
@@ -269,6 +283,7 @@ interface ErrorApi {
   error?: string | { code?: string; message?: string };
 }
 
+// Acepta los dos formatos de error del backend: {error: "texto"} y {error: {code, message}}.
 async function leerRespuesta<T>(respuesta: Response, mensajeFallback: string): Promise<T> {
   const datos = await respuesta.json() as T & ErrorApi;
   if (!respuesta.ok) {
@@ -280,6 +295,7 @@ async function leerRespuesta<T>(respuesta: Response, mensajeFallback: string): P
 }
 
 export async function obtenerPerfilRecomendacion(productoId: number): Promise<RespuestaPerfilRecomendacion> {
+  // Con la cookie de sesión: el endpoint solo responde a administradores.
   const respuesta = await fetch(`${BASE_URL}/perfil-ia.php?producto_id=${productoId}`, {
     credentials: 'include',
   });

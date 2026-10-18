@@ -1,3 +1,11 @@
+/**
+ * Formulario del asistente de recomendaciones y lista de resultados.
+ *
+ * Valida en el navegador lo mismo que el backend (longitudes y presupuesto) para
+ * avisar antes de enviar, llama a recomendacionesService y muestra las
+ * recomendaciones, los productos disponibles cuando no se reconoce el uso, los
+ * avisos y el mensaje cuando no hay resultados.
+ */
 import { useRef, useState, type FormEvent } from 'react';
 import { ArrowUpRight, Cpu, LoaderCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -19,8 +27,10 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 
+// Mismo límite que RECOMENDACIONES_MAX_PRESUPUESTO en backend/recomendaciones/recomendar.php.
 const PRESUPUESTO_MAXIMO = 10_000_000;
 
+/** Traduce los códigos de error del backend y del servicio a un mensaje para el cliente. */
 function mensajeErrorRecomendaciones(error: unknown): string {
   if (!(error instanceof ErrorRecomendaciones)) {
     return 'No se pudo completar la recomendación. Inténtalo de nuevo.';
@@ -51,6 +61,7 @@ function mensajeErrorRecomendaciones(error: unknown): string {
   }
 }
 
+// Array.from cuenta caracteres (un emoji es uno), como el backend; .length contaría unidades UTF-16.
 function validarLongitud(campo: string, maximo: number): boolean {
   return Array.from(campo.trim()).length > 0 && Array.from(campo.trim()).length <= maximo;
 }
@@ -123,6 +134,8 @@ function TarjetaProductoRecomendado({
 
 function RecommendationForm() {
   const formRef = useRef<HTMLFormElement>(null);
+  // Una ref, y no el estado «cargando», porque se actualiza al instante: evita un doble envío
+  // si se pulsa dos veces antes de que React vuelva a pintar.
   const envioEnCursoRef = useRef(false);
   const [consulta, setConsulta] = useState('');
   const [uso, setUso] = useState('');
@@ -138,6 +151,7 @@ function RecommendationForm() {
       return;
     }
 
+    // El presupuesto se lee del propio input para usar valueAsNumber y su estado de validez.
     const formulario = formRef.current;
     const presupuestoInput = formulario?.elements.namedItem(
       'presupuesto',
@@ -175,6 +189,7 @@ function RecommendationForm() {
         !Number.isFinite(valorPresupuesto) ||
         valorPresupuesto <= 0 ||
         valorPresupuesto > PRESUPUESTO_MAXIMO ||
+        // Como máximo dos decimales, con un margen para el redondeo de coma flotante (0.29 * 100 = 28.999…).
         Math.abs(valorPresupuesto * 100 - Math.round(valorPresupuesto * 100)) > 1e-7
       )
     ) {
@@ -184,6 +199,7 @@ function RecommendationForm() {
       return;
     }
 
+    // Sin presupuesto, la clave no se envía (el backend lo interpreta como «sin límite»).
     const solicitud: SolicitudRecomendaciones = {
       consulta: consultaLimpia,
       uso: usoLimpio,

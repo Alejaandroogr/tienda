@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Tests del catálogo de usos (recomendaciones_usos.php): detección de usos y de
+ * características pedidas, negaciones y criterios de cada uso por categoría.
+ * Uso: php backend/recomendaciones/tests/recomendaciones_usos_test.php
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../recomendaciones_core.php';

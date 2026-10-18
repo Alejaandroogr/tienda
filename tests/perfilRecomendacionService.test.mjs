@@ -1,3 +1,8 @@
+/**
+ * Tests de src/services/perfilRecomendacionService.ts: cuándo se envía el perfil, cómo
+ * se aplican los cambios del formulario sin perder claves y que el esquema del frontend
+ * coincide con el del backend (este último ejecuta PHP; se omite si no está disponible).
+ */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -122,6 +127,7 @@ test('la carga rechaza un perfil con formato inválido en vez de vaciarlo', asyn
   }
 });
 
+// Ruta de PHP en XAMPP; en otra instalación se indica con la variable de entorno PHP_BIN.
 const php = process.env.PHP_BIN ?? 'C:/xampp/php/php.exe';
 
 test('el esquema del frontend coincide con el del backend', { skip: !existsSync(php) && 'PHP no disponible' }, () => {
