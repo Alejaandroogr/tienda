@@ -4240,6 +4240,25 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   }
 }
 
+/*
+ * El asistente no tapa contenido: queda por debajo de los menús laterales (z-index 50)
+ * y por encima de la barra (40), se oculta mientras hay un menú abierto y la página
+ * reserva espacio al final para que el botón no tape el pie.
+ */
+.recommendation-assistant-trigger,
+.recommendation-assistant-panel {
+  z-index: 45;
+}
+
+body:has([data-slot='sheet-content']) .recommendation-assistant-trigger,
+body:has([data-slot='sheet-content']) .recommendation-assistant-panel {
+  visibility: hidden;
+}
+
+body:has(.recommendation-assistant-trigger) .footer {
+  padding-bottom: calc(40px + 72px + env(safe-area-inset-bottom));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .recommendation-assistant-panel {
     animation: none;
