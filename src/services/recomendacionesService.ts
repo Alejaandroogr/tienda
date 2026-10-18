@@ -1,3 +1,10 @@
+/**
+ * Cliente del endpoint del asistente (backend/recomendaciones/recomendar.php).
+ *
+ * No confía en la forma de la respuesta: la valida campo a campo antes de pasarla a
+ * la interfaz y convierte cualquier fallo (red, HTTP, JSON o formato) en un
+ * ErrorRecomendaciones con un código que el formulario traduce a un mensaje.
+ */
 import type { Producto } from '../types/Producto';
 import type {
   CodigoErrorRecomendaciones,
@@ -10,6 +17,7 @@ import type {
 const API_URL =
   'http://localhost/tienda/backend/recomendaciones/recomendar.php';
 
+/** Error con el código del backend (o uno propio del cliente) y el estado HTTP, si hubo respuesta. */
 export class ErrorRecomendaciones extends Error {
   readonly code: CodigoErrorRecomendaciones;
   readonly status: number | null;
@@ -56,6 +64,11 @@ function esProductoRecomendado(valor: unknown): boolean {
   );
 }
 
+/**
+ * Comprueba que la respuesta tiene la forma esperada y devuelve solo los campos
+ * conocidos. Null si algo no encaja: es preferible mostrar un error a pintar datos
+ * incompletos. Una respuesta sin recomendaciones debe traer un mensaje que lo explique.
+ */
 function normalizarRespuestaRecomendaciones(
   valor: unknown
 ): RespuestaRecomendaciones | null {
@@ -156,6 +169,8 @@ export async function solicitarRecomendaciones(
     );
   }
 
+  // Los errores del backend también llegan como JSON ({error: {code, message}}); si ni
+  // siquiera es JSON (por ejemplo, una página de error de Apache), se usa un código genérico.
   let datos: unknown;
 
   try {

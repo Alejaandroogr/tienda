@@ -1,7 +1,20 @@
 <?php
 
+/**
+ * Perfil de recomendación de un producto: los datos verificados que usa el asistente.
+ *
+ * - usos: valoración del administrador por uso («adecuado» o «no_recomendado»).
+ * - atributos: especificaciones técnicas según el esquema de su categoría.
+ *
+ * Aquí está el esquema de cada categoría (el único origen de verdad; el frontend
+ * mantiene una copia que un test compara con este), su validación, las reglas para
+ * conservar o descartar el perfil al editar un producto y el guardado en la tabla
+ * perfil_recomendacion_producto (migración 001).
+ */
+
 declare(strict_types=1);
 
+/** Error de validación o guardado del perfil, con el código y el estado HTTP que debe ver el panel. */
 final class ErrorPerfilRecomendacion extends RuntimeException
 {
     public function __construct(
@@ -13,7 +26,13 @@ final class ErrorPerfilRecomendacion extends RuntimeException
     }
 }
 
-/** @return array{usos: array<string, string>, atributos: array<string, mixed>} */
+/**
+ * Valida un perfil completo contra el esquema de la categoría del producto.
+ * Se recibe decodificado como objetos (stdClass) para distinguir un objeto vacío {}
+ * de una lista [], que en arrays de PHP serían lo mismo.
+ *
+ * @return array{usos: array<string, string>, atributos: array<string, mixed>}
+ */
 function validarPerfilRecomendacion(mixed $perfil, string $categoria): array
 {
     if (!$perfil instanceof stdClass) {
@@ -83,7 +102,12 @@ function completarAtributosOmitidosEdicionPerfilRecomendacion(
     );
 }
 
-/** @param 'usos'|'atributos' $campo */
+/**
+ * Si el campo no viene en la petición, se rellena con el valor guardado (misma categoría)
+ * o con un objeto vacío (categoría nueva o sin perfil previo).
+ *
+ * @param 'usos'|'atributos' $campo
+ */
 function completarCampoOmitidoEdicionPerfilRecomendacion(
     stdClass $perfil,
     string $campo,
@@ -121,6 +145,7 @@ function completarCampoOmitidoEdicionPerfilRecomendacion(
     return $perfil;
 }
 
+/** Solo las categorías con esquema admiten perfil; las demás se pueden crear, pero el asistente no las evalúa. */
 function categoriaAdmitePerfilRecomendacion(string $categoria): bool
 {
     try {
@@ -193,7 +218,13 @@ function planificarPerfilProductoRecomendacion(
     return $categoriaCambio ? 'restablecer' : 'ninguna';
 }
 
-/** @return array{usos: list<string>, atributos: array<string, array<string, mixed>>} */
+/**
+ * Usos y atributos admitidos en cada categoría, con su tipo y sus límites.
+ * Debe coincidir con camposPorCategoria y usosPorCategoria de src/services/perfilRecomendacionService.ts
+ * (lo comprueba tests/perfilRecomendacionService.test.mjs).
+ *
+ * @return array{usos: list<string>, atributos: array<string, array<string, mixed>>}
+ */
 function esquemaPerfilPorCategoria(string $categoria): array
 {
     $categoriaNormalizada = normalizarCategoriaPerfilRecomendacion($categoria);
@@ -307,6 +338,7 @@ function esquemaPerfilPorCategoria(string $categoria): array
     return $esquemas[$categoriaNormalizada];
 }
 
+/** «Tarjetas gráficas» → «tarjetas graficas»: el nombre de la categoría en la BD se compara sin tildes ni mayúsculas. */
 function normalizarCategoriaPerfilRecomendacion(string $categoria): string
 {
     $categoria = strtr(mb_strtolower($categoria, 'UTF-8'), [
@@ -411,6 +443,11 @@ function validarAtributosPerfilRecomendacion(mixed $atributos, array $esquemaAtr
     return $resultado;
 }
 
+/**
+ * Valida un valor según su regla y lo devuelve normalizado (texto recortado, grado IP en
+ * mayúsculas, lista sin duplicados). Un texto o una lista vacíos se guardan como null:
+ * «sin dato», que el asistente nunca cuenta como cumplido.
+ */
 function validarValorAtributoPerfilRecomendacion(
     string $atributo,
     mixed $valor,
@@ -553,6 +590,7 @@ function validarValorAtributoPerfilRecomendacion(
     throw new LogicException('Tipo de atributo de perfil no configurado');
 }
 
+/** Caracteres UTF-8, no bytes; con UTF-8 inválido el texto se considera demasiado largo. */
 function contarCaracteresPerfilRecomendacion(string $valor): int
 {
     $cantidad = preg_match_all('/./us', $valor);
@@ -560,7 +598,11 @@ function contarCaracteresPerfilRecomendacion(string $valor): int
     return $cantidad === false ? PHP_INT_MAX : $cantidad;
 }
 
-/** Obtiene la categoría del producto en BD y persiste un perfil ya validado. */
+/**
+ * Valida el perfil con la categoría que el producto tiene en la BD (nunca con la que
+ * envíe el cliente) y lo guarda. Debe llamarse dentro de una transacción: FOR UPDATE
+ * impide que la categoría cambie entre la validación y el guardado.
+ */
 function guardarPerfilRecomendacion(PDO $pdo, int $productoId, mixed $perfil): array
 {
     $consulta = $pdo->prepare(
@@ -616,6 +658,7 @@ function guardarPerfilRecomendacion(PDO $pdo, int $productoId, mixed $perfil): a
     ];
 }
 
+/** Responde un error del perfil con el formato {error: {code, message}} que espera el panel. */
 function enviarErrorPerfilRecomendacion(
     string $codigo,
     string $mensaje,

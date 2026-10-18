@@ -1,7 +1,24 @@
 <?php
 
+/**
+ * Reglas del asistente de recomendaciones. Funciones puras, sin acceso a la base
+ * de datos ni a Ollama, para poder probarlas de forma aislada.
+ *
+ * - Reconocimiento del tipo de producto en la consulta (sinónimos, tipos que la
+ *   tienda no vende, «PC» ambiguo).
+ * - Evaluación de cada producto con los criterios de cada uso y las
+ *   características pedidas, a partir de su perfil verificado.
+ * - Agrupación y orden de los resultados.
+ * - Validación de lo que devuelve Ollama: solo puede reordenar y redactar, y cada
+ *   explicación debe poder verificarse con los datos del producto.
+ * - Mensajes al cliente cuando no hay recomendaciones.
+ *
+ * Los usos por categoría y sus criterios están en recomendaciones_usos.php.
+ */
+
 declare(strict_types=1);
 
+/** Respuesta de Ollama que no cumple el contrato; se descarta y se usa la alternativa de PHP. */
 final class ErrorRespuestaModeloRecomendaciones extends RuntimeException
 {
     public function __construct(
@@ -53,6 +70,10 @@ function sanitizarPerfilCategoriaRecomendaciones(string $categoria, array $atrib
 
 const RECOMENDACIONES_MAX_POR_NIVEL = 3;
 
+/**
+ * Precio («899.99», como lo devuelve MariaDB para DECIMAL) en céntimos enteros, para
+ * comparar con el presupuesto sin errores de coma flotante. Null si el formato no es válido.
+ */
 function precioCentimosRecomendaciones(mixed $precio): ?int
 {
     if (!is_string($precio) || !preg_match('/\A(\d+)(?:\.(\d{1,2}))?\z/', $precio, $partes)) {
@@ -76,7 +97,13 @@ function precioCentimosRecomendaciones(mixed $precio): ?int
     return ($euros * 100) + $centimos;
 }
 
-/** @param int|null $presupuestoCentimos null: sin límite de precio (presupuesto no indicado) */
+/**
+ * Filtros que no admiten matices: precio dentro del presupuesto, stock disponible
+ * y categoría pedida. Se aplican después de evaluar, para poder explicar por qué
+ * no hay resultados (por ejemplo, el más barato que cumple está fuera del presupuesto).
+ *
+ * @param int|null $presupuestoCentimos null: sin límite de precio (presupuesto no indicado)
+ */
 function candidatoCumpleFiltrosDurosRecomendaciones(
     array $producto,
     ?int $presupuestoCentimos,
@@ -93,6 +120,7 @@ function candidatoCumpleFiltrosDurosRecomendaciones(
         ($categoriaIds === [] || in_array($categoriaId, $categoriaIds, true));
 }
 
+/** Minúsculas, sin tildes y solo letras y números separados por un espacio: así se comparan las palabras clave. */
 function normalizarTextoIdoneidadRecomendaciones(string $texto): string
 {
     $texto = strtr(strtolower($texto), [
@@ -118,6 +146,7 @@ function eliminarUsosNegadosRecomendaciones(string $textoNormalizado): string
     return trim(preg_replace($patron, ' ', $textoNormalizado) ?? $textoNormalizado);
 }
 
+/** «con GPU dedicada» la exige; «sin gráfica dedicada» o «no quiero GPU dedicada», no. */
 function solicitudExigeGpuDedicadaRecomendaciones(string $textoNormalizado): bool
 {
     if (preg_match('/\b(?:sin|no\s+(?:quiero|necesito|busco))\s+(?:(?:una|la)\s+)?(?:gpu|grafica|tarjeta\s+grafica)\s+dedicada\b/', $textoNormalizado) === 1) {
@@ -128,7 +157,13 @@ function solicitudExigeGpuDedicadaRecomendaciones(string $textoNormalizado): boo
 }
 
 
-/** @return 'affirmative'|'negated'|'ambiguous' */
+/**
+ * Si el cliente pide hablar (micrófono, llamadas, chat de voz) o lo descarta.
+ * Solo «negated» cambia algo: deja de exigirse micrófono en auriculares para jugar.
+ * Sin mención, o con mensajes contradictorios, se responde «ambiguous» y se mantiene el criterio.
+ *
+ * @return 'affirmative'|'negated'|'ambiguous'
+ */
 function solicitudNecesitaComunicacionVozRecomendaciones(string $texto): string
 {
     $textoNormalizado = normalizarTextoIdoneidadRecomendaciones($texto);
@@ -174,6 +209,11 @@ function senalTextoGamingRecomendaciones(string $texto): ?string
     return $coincidencia[1];
 }
 
+/**
+ * Texto de un atributo del perfil con su etiqueta y unidad («RAM: 16 GB»). Estos textos
+ * son los «datos verificados» que se pasan a Ollama y contra los que se comprueban sus
+ * explicaciones. Null si la clave no se describe o el valor no es mostrable.
+ */
 function describirEspecificacionRecomendaciones(string $clave, mixed $valor): ?string
 {
     $etiquetas = [
@@ -246,6 +286,7 @@ function valorDescritoRecomendaciones(string $clave, mixed $valor): ?string
     return $descripcion === null ? null : substr($descripcion, strpos($descripcion, ': ') + 2);
 }
 
+/** «16» en lugar de «16.0»; los decimales reales se mantienen («1.5»). */
 function formatearNumeroRecomendaciones(float $numero): string
 {
     return floor($numero) === $numero ? (string) (int) $numero : (string) $numero;
@@ -471,6 +512,7 @@ function evaluarProductoRecomendaciones(
         }
     }
 
+    // La puntuación solo ordena productos del mismo nivel; no decide si se recomienda.
     $puntuacion = (float) count($pedidasCumplidas);
     $frases = [];
     $datos = [];
@@ -495,6 +537,8 @@ function evaluarProductoRecomendaciones(
             }
         }
 
+        // La valoración «adecuado» del administrador basta para recomendar si ningún dato la contradice,
+        // aunque falten datos para comprobar algún criterio.
         $valoradoAdecuado = ($valoraciones[$usoPedido] ?? null) === 'adecuado';
         $puntuacion += ($valoradoAdecuado ? 1 : 0) + bonusOrdenUsoRecomendaciones($categoria, $usoPedido, $especificaciones, $textoProducto);
         $cumpleTodos = $criterios !== [] && count($cumplidos) === count($criterios);
@@ -560,6 +604,8 @@ function evaluarProductoRecomendaciones(
         $frases[] = 'Datos registrados: ' . implode('; ', $pertinentes) . '.';
     }
 
+    // $datos es lo que verá Ollama como «datos verificados»: incluye también lo que falta,
+    // para que no pueda presentarlo como cumplido.
     $datos = array_merge(
         $datos,
         array_map(static fn (string $c): string => 'sin dato: ' . $c, array_merge($desconocidos, $pedidasSinDato)),
@@ -693,6 +739,7 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
     $explicacion = trim($explicacion);
     $longitud = mb_strlen($explicacion, 'UTF-8');
 
+    // Fuera de extensión, o con HTML o enlaces: se descarta sin más análisis.
     if ($longitud < 20 || $longitud > 400 || preg_match('/[<>]|https?:|www\./i', $explicacion) === 1) {
         return false;
     }
@@ -733,6 +780,8 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
         }
     }
 
+    // Un término técnico (unidad, componente, marca de chip…) solo puede aparecer si figura en los datos:
+    // es la forma más habitual de inventar una especificación.
     $terminosTecnicos = [
         'hz', 'gb', 'tb', 'rtx', 'gtx', 'radeon', 'gddr', 'ms', 'latencia', 'bluetooth', 'usb', 'jack', 'cable',
         'inalambrico', 'inalambricos', 'ghz', 'envolvente', 'microfono', 'allm', 'vrr', 'dedicada',
@@ -748,6 +797,7 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
         }
     }
 
+    // El resto de palabras deben salir de los datos, de la consulta o de esta lista de palabras de enlace.
     $palabrasEnlace = [
         'los', 'las', 'del', 'con', 'sin', 'para', 'por', 'que', 'pero', 'tambien', 'ademas', 'muy', 'mas',
         'este', 'esta', 'estos', 'estas', 'ese', 'esa', 'como', 'porque', 'todo', 'todos', 'ambos', 'ambas',
@@ -776,6 +826,7 @@ function explicacionModeloEsVerificableRecomendaciones(string $explicacion, arra
             }
         }
 
+        // Se toleran hasta tres palabras ajenas (conjugaciones, sinónimos sencillos); más indican texto inventado.
         if (++$ajenas > 3) {
             return false;
         }
@@ -931,6 +982,7 @@ function mensajeSinProductosEnPresupuestoRecomendaciones(
         formatearPrecioRecomendaciones($masBarato['precio']) . '.';
 }
 
+/** Misma normalización que normalizarTextoIdoneidadRecomendaciones(), usada para reconocer el tipo de producto. */
 function normalizarTextoRecomendaciones(string $texto): string
 {
     $texto = strtr(strtolower($texto), [
@@ -942,6 +994,7 @@ function normalizarTextoRecomendaciones(string $texto): string
     return trim($texto ?? '');
 }
 
+/** Sustituye los sinónimos del tipo de producto por su forma canónica («cascos» → «auriculares», «tele» → «television»). */
 function normalizarSinonimosRecomendaciones(string $texto): string
 {
     $diccionarioSinonimos = [
@@ -999,6 +1052,8 @@ function normalizarSinonimosRecomendaciones(string $texto): string
             normalizarTextoRecomendaciones($canonico);
     }
 
+    // Las frases más largas primero, para que «tarjeta grafica» no se trate como «grafica»,
+    // y en una sola pasada, para que una sustitución no vuelva a sustituirse.
     $alternativas = array_keys($diccionarioNormalizado);
     usort($alternativas, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
     $patron = '/(?<![a-z0-9])(' . implode('|', array_map(
@@ -1065,9 +1120,17 @@ function textoInterpretableRecomendaciones(string $texto): string
     return implode(' ', $palabras);
 }
 
+/**
+ * Categorías del catálogo que nombra la consulta y casos especiales: tipo que la
+ * tienda no vende, «PC» u «ordenador» sin concretar, o un tipo reconocido que no
+ * existe como categoría en la base de datos.
+ *
+ * @param list<array{id:int|string, nombre:string}> $categorias categorías de la base de datos
+ */
 function resolverTipoProductoRecomendaciones(string $consulta, array $categorias): array
 {
     $reglas = reglasTipoProductoRecomendaciones();
+    // Espacios a los lados para buscar palabras completas con strpos(' palabra ').
     $consultaNormalizada = ' ' . normalizarTextoRecomendaciones($consulta) . ' ';
     $idsPorCategoria = [];
 
@@ -1075,6 +1138,7 @@ function resolverTipoProductoRecomendaciones(string $consulta, array $categorias
         $nombreNormalizado = normalizarTextoRecomendaciones((string) $categoria['nombre']);
         $idsPorCategoria[$nombreNormalizado] = (int) $categoria['id'];
 
+        // También el singular aproximado del nombre de la categoría («televisores» → «televisor»).
         if (str_ends_with($nombreNormalizado, 'es')) {
             $idsPorCategoria[substr($nombreNormalizado, 0, -2)] = (int) $categoria['id'];
         } elseif (str_ends_with($nombreNormalizado, 's')) {

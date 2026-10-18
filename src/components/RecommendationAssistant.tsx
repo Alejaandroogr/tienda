@@ -1,3 +1,10 @@
+/**
+ * Botón flotante «Asistente IA» y panel que contiene el formulario de recomendaciones.
+ *
+ * El panel se oculta con «hidden» en lugar de desmontarse, para conservar la consulta
+ * y los resultados al cerrarlo y volver a abrirlo. Gestiona el foco y la tecla Escape;
+ * su aspecto en cada tamaño de pantalla (pantalla completa en móvil) está en App.css.
+ */
 import { useEffect, useRef, useState } from 'react';
 import { Bot, X } from 'lucide-react';
 import { Button } from './ui/button';
@@ -7,8 +14,10 @@ function RecommendationAssistant() {
   const [abierto, setAbierto] = useState(false);
   const botonAbrirRef = useRef<HTMLButtonElement>(null);
   const botonCerrarRef = useRef<HTMLButtonElement>(null);
+  // Evita mover el foco al botón flotante al cargar la página: solo tras cerrar el panel.
   const seAbrioRef = useRef(false);
 
+  // Al abrir, el foco pasa al botón de cerrar del panel; al cerrar, vuelve al botón que lo abrió.
   useEffect(() => {
     if (abierto) {
       seAbrioRef.current = true;

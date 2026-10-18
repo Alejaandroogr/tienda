@@ -1,14 +1,32 @@
 <?php
 
+/**
+ * Endpoint del asistente de recomendaciones: POST /recomendaciones/recomendar.php
+ * con {consulta, uso?, presupuesto?}.
+ *
+ * Flujo: valida la entrada, reconoce el tipo de producto, lee del catálogo los
+ * productos de esa categoría con su perfil de recomendación, detecta el uso
+ * (palabras clave y, solo si no bastan, Ollama con una lista cerrada), evalúa
+ * cada producto con las reglas de recomendaciones_core.php y aplica presupuesto
+ * y stock. Ollama solo ordena y redacta las explicaciones de los productos que
+ * PHP ya ha aprobado; si falla, se responde con el orden y los textos de PHP.
+ *
+ * Respuesta: {recommendations, message?, available?, notices?, detection}.
+ * Los errores usan el formato {error: {code, message}}.
+ */
+
 declare(strict_types=1);
 
 const RECOMENDACIONES_ORIGEN_FRONTEND = 'http://localhost:5173';
 const RECOMENDACIONES_MAX_CUERPO_BYTES = 8192;
 const RECOMENDACIONES_MAX_PRESUPUESTO = 10000000;
+// Productos leídos como máximo por consulta; se puede bajar con la variable de entorno RECOMMENDATIONS_MAX_CANDIDATES.
 const RECOMENDACIONES_CANDIDATOS_DEFECTO = 1000;
 const RECOMENDACIONES_CANDIDATOS_MAXIMO = 1000;
 
 ini_set('display_errors', '0');
+// Toda la salida pasa por un búfer para que, ante un error a mitad de respuesta,
+// se pueda descartar lo escrito y devolver un JSON de error limpio.
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
@@ -41,6 +59,7 @@ set_exception_handler(static function (Throwable $error): void {
     responderErrorInternoRecomendaciones();
 });
 
+// Los errores fatales no llegan al manejador de excepciones: se detectan al terminar el script.
 register_shutdown_function(static function (): void {
     $error = error_get_last();
     $erroresFatales = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
@@ -53,6 +72,8 @@ register_shutdown_function(static function (): void {
     responderErrorInternoRecomendaciones();
 });
 
+// Los navegadores envían Origin en los POST: si viene y no es el del frontend, se
+// rechaza. Las peticiones sin Origin (curl, tests, herramientas) se permiten.
 $origen = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 if ($origen !== '' && $origen !== RECOMENDACIONES_ORIGEN_FRONTEND) {
@@ -100,6 +121,7 @@ function errorRecomendaciones(
     ]);
 }
 
+/** Caracteres UTF-8, no bytes. Un texto con UTF-8 inválido cuenta como demasiado largo y se rechaza. */
 function contarCaracteresRecomendaciones(string $texto): int
 {
     $cantidad = preg_match_all('/./us', $texto, $coincidencias);
@@ -107,6 +129,7 @@ function contarCaracteresRecomendaciones(string $texto): int
     return $cantidad === false ? PHP_INT_MAX : $cantidad;
 }
 
+/** Decodifica una columna JSON del perfil. Cualquier valor no válido se trata como perfil vacío («sin dato»). */
 function objetoJsonPerfilRecomendaciones(mixed $json): array
 {
     if (!is_string($json) || $json === '') {
@@ -147,6 +170,15 @@ function parsearLimiteCandidatosRecomendaciones(): int
     return max(1, min((int) $configurado, RECOMENDACIONES_CANDIDATOS_MAXIMO));
 }
 
+/**
+ * Presupuesto en céntimos, o null si no es válido.
+ *
+ * json_decode convierte el número en float y perdería la información necesaria
+ * para comprobar «como máximo dos decimales» (10.555, 1e-3, 0.1 + redondeos).
+ * Por eso se vuelve a leer el número tal como viene escrito en el cuerpo JSON y
+ * se pasa a céntimos con aritmética de cadenas, sin coma flotante. Debe aparecer
+ * una sola clave "presupuesto": si se repite, no se sabe cuál usó json_decode.
+ */
 function presupuestoEnCentimosRecomendaciones(string $cuerpo, mixed $presupuesto): ?int
 {
     if (
@@ -186,6 +218,8 @@ function presupuestoEnCentimosRecomendaciones(string $cuerpo, mixed $presupuesto
         return null;
     }
 
+    // Todos los dígitos sin la coma; la escala indica cuántos sobran (si es positiva)
+    // o faltan (si es negativa) para expresar el valor en céntimos.
     $exponente = (int) $exponenteTexto;
     $digitos = ltrim($partes[2] . $fraccion, '0');
     $digitos = $digitos === '' ? '0' : $digitos;
@@ -200,6 +234,7 @@ function presupuestoEnCentimosRecomendaciones(string $cuerpo, mixed $presupuesto
             return null;
         }
 
+        // Los dígitos por debajo del céntimo solo se admiten si son ceros (12.500 sí, 12.505 no).
         $recortados = substr($digitos, -$escalaEnCentimos);
 
         if (trim($recortados, '0') !== '') {
@@ -215,6 +250,7 @@ function presupuestoEnCentimosRecomendaciones(string $cuerpo, mixed $presupuesto
         $digitos .= str_repeat('0', -$escalaEnCentimos);
     }
 
+    // Comparación como cadenas para no desbordar un int con valores enormes.
     $digitos = ltrim($digitos, '0');
     $digitos = $digitos === '' ? '0' : $digitos;
     $limiteCentimos = (string) (RECOMENDACIONES_MAX_PRESUPUESTO * 100);
@@ -229,6 +265,7 @@ function presupuestoEnCentimosRecomendaciones(string $cuerpo, mixed $presupuesto
     return (int) $digitos;
 }
 
+/** Datos del producto que se envían al cliente (sin el perfil interno de recomendación). */
 function productoPublicoRecomendaciones(array $fila): array
 {
     return [
@@ -243,6 +280,10 @@ function productoPublicoRecomendaciones(array $fila): array
         'categoria' => (string) $fila['categoria'],
     ];
 }
+
+// ---------------------------------------------------------------------------
+// Validación de la solicitud
+// ---------------------------------------------------------------------------
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Allow: POST, OPTIONS');
@@ -336,6 +377,8 @@ if ($presupuesto !== null && !(is_string($presupuesto) && trim($presupuesto) ===
     $presupuestoEuros = intdiv($presupuestoEnCentimos, 100) . '.' .
         str_pad((string) ($presupuestoEnCentimos % 100), 2, '0', STR_PAD_LEFT);
 }
+// Con este modo, config/database.php lanza una excepción si no puede conectar en lugar
+// de responder él mismo, y el error sale con el formato de este endpoint.
 $databaseFailureMode = 'exception';
 $textoSolicitud = normalizarTextoIdoneidadRecomendaciones($consulta . ' ' . $uso);
 
@@ -350,7 +393,13 @@ function responderResultadoRecomendaciones(array $cuerpo, array $deteccion, arra
     responderRecomendaciones(200, $cuerpo);
 }
 
-/** @return array{url:string, modelo:string}|null */
+/**
+ * URL y modelo de Ollama (variables de entorno OLLAMA_URL y OLLAMA_MODEL, opcionales).
+ * La URL solo puede apuntar a la propia máquina: el endpoint nunca envía las
+ * consultas de los clientes a un servicio externo. Null si la configuración no es válida.
+ *
+ * @return array{url:string, modelo:string}|null
+ */
 function configuracionOllamaRecomendaciones(): ?array
 {
     $urlOllama = getenv('OLLAMA_URL');
@@ -405,7 +454,9 @@ function solicitarJsonOllamaRecomendaciones(string $sistema, array $datos, array
                 ['role' => 'user', 'content' => json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)],
             ],
             'stream' => false,
+            // qwen3 razona por defecto antes de responder: desactivarlo acorta mucho la espera.
             'think' => false,
+            // Esquema JSON que Ollama obliga a cumplir (por ejemplo, IDs limitados a los recibidos).
             'format' => $formato,
             'options' => ['temperature' => $temperatura, 'num_ctx' => 8192],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
@@ -419,6 +470,8 @@ function solicitarJsonOllamaRecomendaciones(string $sistema, array $datos, array
         return null;
     }
 
+    // El límite de PHP debe superar el de cURL para que sea cURL quien corte y se use la alternativa de PHP.
+    // La conexión tiene 3 s: si Ollama no está arrancado, se sigue sin él casi al instante.
     set_time_limit(max(65, $tiempoMaximo + 10));
     curl_setopt_array($curl, [
         CURLOPT_POST => true,
@@ -557,12 +610,17 @@ function solicitarOrdenModeloRecomendaciones(array $niveles, string $consulta, s
     }
 }
 
+// ---------------------------------------------------------------------------
+// Tipo de producto y lectura del catálogo
+// ---------------------------------------------------------------------------
+
 try {
     require_once __DIR__ . '/../config/database.php';
 
     $categoriasDisponibles = $pdo->query(
         'SELECT id, nombre FROM categorias'
     )->fetchAll(PDO::FETCH_ASSOC);
+    // Si la migración 001 no está aplicada, el asistente sigue funcionando sin perfiles (todo «sin dato»).
     $perfilDisponible = (int) $pdo->query(
         "SELECT COUNT(*) FROM information_schema.tables
          WHERE table_schema = DATABASE()
@@ -572,6 +630,7 @@ try {
     $tipoProducto = resolverTipoProductoRecomendaciones($consultaCanonica, $categoriasDisponibles);
     $deteccionVacia = ['usos' => [], 'via' => 'ninguna'];
 
+    // Antes de leer productos: tipo que la tienda no vende, «PC» sin concretar o texto sin un tipo reconocible.
     if ($tipoProducto['no_disponible']) {
         responderResultadoRecomendaciones(['recommendations' => [], 'message' => mensajeTipoNoDisponibleRecomendaciones()], $deteccionVacia, []);
     }
@@ -643,6 +702,10 @@ foreach ($categoriasDisponibles as $categoriaDisponible) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Detección del uso
+// ---------------------------------------------------------------------------
+
 // Detección del uso, paso 1: palabras clave en las categorías buscadas (o en todas).
 $catalogo = catalogoUsosRecomendaciones();
 $categoriasObjetivo = $nombresCategorias === []
@@ -701,9 +764,14 @@ if ($usosPalabras === [] && !$hayCaracteristicas) {
 $deteccion = ['usos' => $usosForzados ?? $usosPalabras, 'via' => $via];
 $categoriaSolicitada = $nombresCategorias !== [];
 
+// ---------------------------------------------------------------------------
+// Evaluación y respuesta
+// ---------------------------------------------------------------------------
+
 // Evaluación de todos los productos leídos; los filtros de presupuesto y stock se aplican después.
 $productos = [];
 foreach ($filas as $fila) {
+    // Un perfil guardado con otra categoría (el producto cambió de categoría) no se usa: sus atributos serían de otro esquema.
     $perfilValido = $perfilDisponible &&
         $fila['perfil_categoria_id'] !== null &&
         (int) $fila['perfil_categoria_id'] === (int) $fila['categoria_id'];
@@ -729,6 +797,8 @@ foreach ($filas as $fila) {
     ];
 }
 
+// «confirmed»: cumple todo y hay datos que lo demuestran. «candidate»: puede encajar pero le falta algún dato.
+// Solo «confirmed» llega al cliente como recomendación.
 $dentro = array_values(array_filter($productos, static fn (array $p): bool => $p['dentro']));
 $productosPublicos = [];
 $evaluados = [];
@@ -776,6 +846,7 @@ if ($usoDesconocido && $dentro !== []) {
     ], $deteccion, $avisos);
 }
 
+// Sin recomendados: se busca el mensaje más útil (sin stock, fuera de presupuesto, varios usos a la vez…).
 $porPrecio = static function (array $lista): array {
     usort($lista, static fn (array $a, array $b): int =>
         [precioCentimosRecomendaciones($a['candidato']['precio']), $a['candidato']['id']] <=>

@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Tests de los atributos del perfil que usan los criterios: que el esquema y el saneador
+ * los aceptan con sus límites y que cambian el resultado de la evaluación.
+ * Uso: php backend/recomendaciones/tests/recomendaciones_atributos_test.php
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../recomendaciones_core.php';

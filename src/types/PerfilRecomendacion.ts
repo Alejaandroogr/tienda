@@ -1,3 +1,8 @@
+/**
+ * Tipos del perfil de recomendación de un producto: atributos por categoría,
+ * valoración de usos y descripción de los campos del formulario del panel.
+ * Reflejan el esquema de backend/productos/perfil_recomendacion.php.
+ */
 export type NivelRendimiento = 'entrada' | 'media' | 'alta';
 
 export type CategoriaPerfil =

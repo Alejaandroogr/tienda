@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Perfil de recomendación de un producto, solo para administradores.
+ *
+ * GET ?producto_id=N  devuelve el perfil (vacío si aún no tiene) y si existe.
+ * PUT {producto_id, usos, atributos}  lo valida y lo guarda en una transacción.
+ *
+ * La categoría nunca la envía el cliente: se toma del producto en la BD.
+ * La validación y el guardado están en perfil_recomendacion.php.
+ */
+
 declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -58,6 +68,7 @@ if ($metodo === 'GET') {
 
         $tienePerfil = $fila['usos'] !== null && $fila['atributos'] !== null;
 
+        // Un perfil de otra categoría tendría atributos de otro esquema: no se devuelve para no editarlo por error.
         if (
             $tienePerfil &&
             (int) $fila['perfil_categoria_id'] !== (int) $fila['categoria_id']
@@ -120,6 +131,7 @@ if ($cuerpo === false || strlen($cuerpo) > 65536) {
 }
 
 try {
+    // Como objetos (no arrays) para distinguir {} de [] al validar el perfil.
     $datos = json_decode($cuerpo, false, 32, JSON_THROW_ON_ERROR);
 } catch (JsonException) {
     enviarErrorPerfilRecomendacion(
@@ -163,6 +175,7 @@ if (
     );
 }
 
+// En el PUT el perfil se sustituye entero: un campo omitido se guarda vacío.
 try {
     $pdo->beginTransaction();
     $perfilGuardado = guardarPerfilRecomendacion(

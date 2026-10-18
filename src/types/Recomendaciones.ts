@@ -1,3 +1,8 @@
+/**
+ * Tipos de la solicitud y la respuesta del endpoint del asistente
+ * (backend/recomendaciones/recomendar.php). Los nombres de los campos de la
+ * respuesta están en inglés porque así los devuelve la API.
+ */
 import type { Producto } from './Producto';
 
 export interface SolicitudRecomendaciones {

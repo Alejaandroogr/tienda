@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Tests de la edición parcial del perfil de recomendación (perfil_recomendacion.php):
+ * qué se conserva, qué se vacía y qué se elimina al editar un producto o cambiarlo de categoría.
+ * Uso: php backend/productos/tests/perfil_recomendacion_partial_update_test.php
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../perfil_recomendacion.php';

@@ -11,9 +11,16 @@ declare(strict_types=1);
  * «sin dato» hasta que el saneador los acepte, y por tanto no recomiendan.
  */
 
+// Como máximo dos usos por consulta («para programar y jugar»): un producto debe cumplirlos todos.
 const RECOMENDACIONES_MAX_USOS = 2;
 
-/** @return array<string, array<string, array{etiqueta:string, sinonimos:list<string>}>> */
+/**
+ * Usos que se valoran en cada categoría (clave: nombre de categoría normalizado).
+ * La etiqueta se usa en los textos al cliente («para jugar») y los sinónimos, ya
+ * normalizados, son las palabras clave que lo detectan. Se construye una sola vez.
+ *
+ * @return array<string, array<string, array{etiqueta:string, sinonimos:list<string>}>>
+ */
 function catalogoUsosRecomendaciones(): array
 {
     static $catalogo = null;
@@ -114,6 +121,7 @@ function catalogoUsosRecomendaciones(): array
     return $catalogo;
 }
 
+/** Etiqueta del uso en la categoría indicada (la misma clave puede tener otra etiqueta en otra categoría). */
 function etiquetaUsoRecomendaciones(string $uso, ?string $categoria = null): string
 {
     $catalogo = catalogoUsosRecomendaciones();
@@ -152,6 +160,7 @@ function detectarUsosCategoriaRecomendaciones(string $textoNormalizado, string $
         }
     }
 
+    // Por posición de la primera mención: si se piden más de dos usos, cuentan los primeros.
     asort($posiciones);
 
     return array_slice(array_keys($posiciones), 0, RECOMENDACIONES_MAX_USOS);
@@ -183,6 +192,8 @@ function coincidenciaNoNegadaRecomendaciones(string $patron, string $texto, ?arr
         return false;
     }
 
+    // Basta con que una aparición no esté negada. Se miran los 12 caracteres previos:
+    // la negación y, como mucho, una palabra intermedia («sin cancelación», «no quiero gps»).
     foreach ($todas as $coincidencia) {
         $antes = substr($texto, max(0, $coincidencia[0][1] - 12), min(12, $coincidencia[0][1]));
         if (preg_match('/\b(?:sin|no|ni)\s+(?:\S+\s+)?$/', $antes) !== 1) {
@@ -202,6 +213,8 @@ function coincidenciaNoNegadaRecomendaciones(string $patron, string $texto, ?arr
  */
 function detectarCaracteristicasRecomendaciones(string $consulta, string $uso, string $categoria): array
 {
+    // Las pulgadas se buscan en el texto original: la normalización quita las comillas (65")
+    // y las comas decimales (6,1 pulgadas).
     $original = mb_strtolower($consulta . ' ' . $uso, 'UTF-8');
     $texto = normalizarTextoIdoneidadRecomendaciones($consulta . ' ' . $uso);
     $caracteristicas = [];
@@ -214,6 +227,7 @@ function detectarCaracteristicasRecomendaciones(string $consulta, string $uso, s
         }
     };
     $pulgadas = static function () use ($original, $agregar): void {
+        // «más de 55 pulgadas» es un mínimo; «de 55 pulgadas», un tamaño aproximado (±1,5).
         if (preg_match('/(m[aá]s de|m[ií]nimo|al menos|desde)?\s*(\d{2,3}(?:[.,]\d)?)\s*(?:pulgadas|")/u', $original, $m) === 1) {
             $valor = (float) str_replace(',', '.', $m[2]);
             $m[1] !== ''
@@ -320,6 +334,7 @@ function evaluarCaracteristicaRecomendaciones(array $caracteristica, array $espe
         case 'lista_no_vacia':
             return is_array($valor) ? $valor !== [] : null;
         case 'ip_agua':
+            // Un grado IP sin protección frente al agua (IP6X) es un dato en contra, no un dato que falta.
             $digito = digitoAguaResistenciaIpRecomendaciones($valor);
             return $digito === null ? false : $digito >= $caracteristica['valor'];
     }
@@ -337,7 +352,11 @@ function digitoAguaResistenciaIpRecomendaciones(mixed $grado): ?int
     return (int) $m[1];
 }
 
-/** @param array<string, mixed> $especificaciones */
+/**
+ * Criterio de valor máximo (por ejemplo, el peso), simétrico a criterioMinimoRecomendaciones().
+ *
+ * @param array<string, mixed> $especificaciones
+ */
 function criterioMaximoRecomendaciones(
     array $especificaciones,
     string $clave,
@@ -358,6 +377,7 @@ function criterioMaximoRecomendaciones(
     ];
 }
 
+/** Criterio de sí/no: true cumple, false no cumple y sin dato queda pendiente (null). */
 function criterioBooleanoRecomendaciones(array $especificaciones, string $clave, string $nombre): array
 {
     $valor = $especificaciones[$clave] ?? null;
@@ -369,7 +389,12 @@ function criterioBooleanoRecomendaciones(array $especificaciones, string $clave,
     };
 }
 
-/** @param list<string> $requeridos todos deben figurar en la lista */
+/**
+ * Criterio sobre un atributo de tipo lista (sensores, HDR). Con $requeridos vacío,
+ * basta con que la lista tenga algún elemento.
+ *
+ * @param list<string> $requeridos todos deben figurar en la lista
+ */
 function criterioListaContieneRecomendaciones(array $especificaciones, string $clave, array $requeridos, string $nombre): array
 {
     $valor = $especificaciones[$clave] ?? null;
@@ -474,6 +499,8 @@ function criteriosUsoRecomendaciones(
         case 'auriculares/viajes':
             $auricular = $especificaciones['autonomia_h'] ?? null;
             $estuche = $especificaciones['autonomia_estuche_h'] ?? null;
+            // Autonomía total = auricular + estuche. Si falta la del estuche, solo se puede
+            // afirmar que cumple cuando el auricular ya llega a 20 h por sí solo.
             $total = is_int($auricular) || is_float($auricular)
                 ? $auricular + ((is_int($estuche) || is_float($estuche)) ? $estuche : 0)
                 : null;

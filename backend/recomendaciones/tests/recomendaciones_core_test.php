@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * Tests de las reglas del asistente (recomendaciones_core.php): tipo de producto,
+ * filtros de precio y stock, criterios de cada uso, clasificación confirmed/candidate,
+ * agrupación, textos de los motivos y validación de las respuestas de Ollama.
+ * Sin base de datos ni Ollama. Uso: php backend/recomendaciones/tests/recomendaciones_core_test.php
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../recomendaciones_core.php';
