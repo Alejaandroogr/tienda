@@ -3623,39 +3623,9 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   transform: translateX(2px);
 }
 
-.home-page .home-scroll-reveal {
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 440ms ease, transform 440ms ease;
-}
-
-.home-page .home-scroll-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.home-page .home-search-reveal {
-  transition-delay: 45ms;
-}
-
-.home-page .store-filters.home-scroll-reveal {
-  transition-delay: 85ms;
-}
-
+/* El catálogo se ve en cuanto se llega a él: sin animaciones que dependan del scroll. */
 .home-page .store-product-enter {
   animation: none;
-}
-
-.home-page .home-product-reveal {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 360ms ease, transform 360ms ease;
-  transition-delay: calc(var(--home-product-order, 0) * 45ms);
-}
-
-.home-page .home-product-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .home-page .store-product-bottom [data-slot='button'] svg {
@@ -3718,9 +3688,7 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   .home-page .store-hero-copy > *,
   .home-page .store-hero-title-line,
   .home-page .store-trust-row > span,
-  .home-page .store-art-chip,
-  .home-page .home-scroll-reveal,
-  .home-page .home-product-reveal {
+  .home-page .store-art-chip {
     animation: none;
     opacity: 1;
     transform: none;
