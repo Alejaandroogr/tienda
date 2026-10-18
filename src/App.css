@@ -4343,3 +4343,93 @@ body:has(.recommendation-assistant-trigger) .footer {
     animation: none;
   }
 }
+
+/*
+ * Zonas táctiles de al menos 44 × 44 px en móvil (WCAG 2.5.5). Los botones, campos y
+ * selectores crecen; los enlaces de texto ganan altura sin cambiar su aspecto.
+ */
+@media (max-width: 760px) {
+  /*
+   * !important a propósito: es un mínimo de accesibilidad acotado al móvil y varias reglas
+   * de página (acciones de tabla, formulario del asistente…) fijan alturas más específicas.
+   * Los disparadores de base-ui cambian el data-slot del botón, por eso se listan aparte.
+   */
+  :is([data-slot='button'], [data-slot='select-trigger'], [data-slot='pagination-link'],
+    [data-slot='sheet-trigger'], [data-slot='sheet-close'], [data-slot='dialog-trigger'],
+    [data-slot='dialog-close'], [data-slot='alert-dialog-trigger'], [data-slot='alert-dialog-action'],
+    [data-slot='alert-dialog-cancel']) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
+  [data-slot='input'] {
+    min-height: 44px;
+  }
+
+  .admin-quicklinks [data-slot='card-content'] a {
+    min-height: 44px;
+  }
+
+  /* La X de los avisos es de 20px: su zona táctil se amplía sin cambiar su aspecto. */
+  [data-sonner-toast] [data-close-button]::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+
+  .store-back-link,
+  .continue-shopping,
+  .store-auth-switch a,
+  .store-cart-product-info > a,
+  .admin-back-store {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .store-back-link,
+  .continue-shopping {
+    margin-bottom: 10px;
+  }
+
+  .store-auth-switch a {
+    padding-inline: 4px;
+  }
+
+  /* El nombre del producto va en su propia línea, debajo de la categoría. */
+  .store-cart-product-info > a {
+    display: flex;
+  }
+
+  /* Estos dos recortan el texto con -webkit-box: solo se les da altura mínima. */
+  .store-logo,
+  .store-product-title,
+  .recommendation-product-name,
+  .store-mobile-nav a,
+  .admin-sidebar-links .admin-nav-link {
+    min-height: 44px;
+  }
+
+  .admin-mobile-header > a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-mobile-header [data-slot='button'] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-mobile-header {
+    height: 60px;
+  }
+
+  .admin-workspace-content > main.admin-container {
+    min-height: calc(100vh - 60px);
+  }
+
+  /* El tirador del rango de precio es de 12px; su zona táctil (::after) pasa de 28 a 44px. */
+  [data-slot='slider-thumb']::after {
+    inset: -16px;
+  }
+}
