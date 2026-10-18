@@ -136,3 +136,9 @@ dist
 .pnp.*
 
 backend/config/database.php
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
