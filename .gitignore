@@ -142,3 +142,11 @@ backend/config/database.php
 Thumbs.db
 .vscode/
 .idea/
+
+# Uso local: batería del asistente contra el catálogo de una base de datos concreta
+backend/recomendaciones/tests/bateria_endpoint.php
+backend/recomendaciones/tests/bateria_esperado_*.php
+
+# Configuración local de Claude Code
+.claude/
+CLAUDE.md
