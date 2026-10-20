@@ -6,9 +6,9 @@ declare(strict_types=1);
  * Catálogo de usos por categoría, detección del uso y de características
  * explícitas, y criterios de cada uso. Funciones puras: no consultan la BD ni Ollama.
  *
- * Los criterios que usan atributos que el perfil aún no admite (almacenamiento
- * de portátiles, cancelación de ruido, sensores, HDR, cámara...) se evalúan como
- * «sin dato» hasta que el saneador los acepte, y por tanto no recomiendan.
+ * Todos los atributos que usan los criterios están en el esquema del perfil
+ * (perfil_recomendacion.php). Si un producto no tiene alguno rellenado, ese
+ * criterio queda «sin dato» y nunca cuenta como cumplido.
  */
 
 // Como máximo dos usos por consulta («para programar y jugar»): un producto debe cumplirlos todos.
