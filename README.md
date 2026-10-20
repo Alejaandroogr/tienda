@@ -19,6 +19,7 @@ El objetivo del proyecto es construir una tienda completa de principio a fin (fr
 - [Capturas](#capturas)
 - [Instalación local](#instalación-local)
 - [Tests](#tests)
+- [Mejoras futuras](#mejoras-futuras)
 - [Autor](#autor)
 
 ## Tecnologías
@@ -43,10 +44,16 @@ El objetivo del proyecto es construir una tienda completa de principio a fin (fr
 **Panel de administración**
 - Dashboard con usuarios, productos, pedidos, ventas, estado de los pedidos y alertas de stock bajo o agotado.
 - Gestión de productos, con su perfil de recomendación, y de categorías.
-- Gestión de pedidos con transiciones de estado controladas: *pendiente → procesando → enviado → entregado*, con la cancelación permitida solo antes del envío. Al cancelar, el stock se repone en la misma transacción.
+- Gestión de pedidos con estados controlados en el servidor: *pendiente → procesando → enviado → entregado*, y cancelación solo antes del envío. Un salto no permitido (volver atrás, saltarse un paso, cancelar un pedido enviado o pedir el estado que ya tiene) se rechaza con HTTP 409. Al cancelar, el stock de cada línea se repone en la misma transacción, con el pedido bloqueado para que dos cancelaciones simultáneas no lo repongan dos veces. El panel solo ofrece las transiciones válidas, y un test comprueba que coinciden con las del backend.
 - Gestión de usuarios y roles.
 
-**Diseño responsive**, revisado a 375, 768 y 1280 px: sin scroll horizontal, tablas con la columna del nombre fija y zonas táctiles de al menos 44 × 44 px en móvil.
+**Diseño responsive**, revisado a 375, 768, 1024 y 1280 px, sin scroll horizontal en ninguna página:
+- **Tablas adaptables.** Cuando una tabla no cabe en su espacio, cada fila se muestra como una tarjeta con un dato por línea («Cliente: …», «Total: …», «Estado: …»), con el estado y las acciones siempre visibles. Lo decide una *container query* según el ancho real de la tabla, no el de la pantalla: la misma tabla puede verse como tabla en escritorio y como tarjetas en un panel estrecho.
+- Zonas táctiles de al menos 44 × 44 px en móvil y un asistente que en móvil ocupa toda la pantalla.
+
+**Precios en formato español** en toda la web («2.199,99 €»), con una única función de formato. El «€» va tras un espacio no separable para que el precio no se parta en dos líneas.
+
+**Carga diferida.** El inicio de sesión, el registro, el checkout, el historial de pedidos y todo el panel de administración se cargan solo cuando se visitan (`React.lazy`), así que quien solo navega por la tienda no descarga el código del panel.
 
 ## Asistente de recomendaciones
 
@@ -89,7 +96,7 @@ La respuesta indica qué explicaciones vienen de Ollama y cuáles de PHP.
 
 ### Ejemplos
 
-Resultados reales del endpoint con el catálogo de ejemplo de 11 productos y un presupuesto de 2000 € salvo que se indique otro. Son casos de la batería de 55 consultas descrita en [Tests](#tests).
+Resultados reales del endpoint con un catálogo de ejemplo de 11 productos y un presupuesto de 2000 € salvo que se indique otro.
 
 | Consulta | Resultado |
 | --- | --- |
@@ -107,7 +114,7 @@ Resultados reales del endpoint con el catálogo de ejemplo de 11 productos y un 
 - **Límite de intentos de login.** Como máximo 5 fallos por email y 5 por IP en 15 minutos; después, HTTP 429 con `Retry-After`. El email se registra solo como hash SHA-256.
 - **Sesiones.** Cookie `HttpOnly` y `SameSite=Lax`, modo estricto (no se aceptan identificadores de sesión inventados) e identificador regenerado al iniciar sesión. El rol se vuelve a leer de la base de datos en cada petición de administración: un administrador degradado o borrado pierde el acceso al momento, aunque tenga la sesión abierta.
 - **Contraseñas** con `password_hash` y `password_verify`, de 8 a 72 caracteres.
-- **Validación en el servidor** de todas las entradas: tipos, rangos, precio con dos decimales como máximo, stock entero no negativo, email válido y longitudes máximas. Los campos que llegan con un tipo inesperado, como un array en lugar de un texto, se rechazan.
+- **Validación en el servidor** de todas las entradas, aunque el formulario ya las compruebe: precio positivo con dos decimales como máximo, stock entero no negativo, email con formato válido, contraseña de 8 a 72 caracteres, longitudes máximas de nombres y textos y estados de pedido válidos. Los campos que llegan con un tipo inesperado, como un array en lugar de un texto, se rechazan con HTTP 400.
 - **Pedidos y stock en transacciones.** Las filas de los productos se bloquean con `SELECT … FOR UPDATE`, el precio se toma de la base de datos (nunca del cliente) y el `UPDATE` exige `stock >= cantidad`. Además, una restricción `CHECK (stock >= 0)` impide la sobreventa incluso ante un fallo de la aplicación. Cancelar un pedido repone el stock en la misma transacción.
 - **Consultas preparadas** en todo el backend, CORS limitado al origen del frontend y **errores genéricos**: el cliente nunca ve detalles internos, que solo se registran en el log del servidor.
 - **IA local.** La URL de Ollama solo puede apuntar a la propia máquina y el tamaño de las peticiones está limitado.
@@ -148,14 +155,14 @@ Hechas con Chrome headless contra una base de datos de pruebas y cuentas fictici
 | <img src="docs/capturas/carrito-escritorio.png" alt="Carrito en escritorio" width="100%"> | <img src="docs/capturas/carrito-movil.png" alt="Carrito en móvil" width="220"> |
 | <img src="docs/capturas/pedidos-escritorio.png" alt="Historial de pedidos en escritorio" width="100%"> | <img src="docs/capturas/pedido-detalle-movil.png" alt="Detalle de un pedido en móvil" width="220"> |
 | <img src="docs/capturas/admin-dashboard-escritorio.png" alt="Dashboard del panel en escritorio" width="100%"> | <img src="docs/capturas/admin-dashboard-movil.png" alt="Dashboard del panel en móvil" width="220"> |
-| <img src="docs/capturas/admin-productos-escritorio.png" alt="Gestión de productos en escritorio" width="100%"> | <img src="docs/capturas/admin-productos-movil.png" alt="Gestión de productos en móvil, con la columna del nombre fija" width="220"> |
+| <img src="docs/capturas/admin-productos-escritorio.png" alt="Gestión de productos en escritorio" width="100%"> | <img src="docs/capturas/admin-productos-movil.png" alt="Gestión de productos en móvil, con cada fila como tarjeta" width="220"> |
 | <img src="docs/capturas/admin-pedidos-escritorio.png" alt="Gestión de pedidos en escritorio" width="100%"> | <img src="docs/capturas/admin-pedidos-movil.png" alt="Gestión de pedidos en móvil" width="220"> |
 
 ## Instalación local
 
-Probado en Windows con XAMPP. El frontend llama al backend en `http://localhost/tienda/backend`, así que el proyecto debe estar en la carpeta `tienda` dentro de `htdocs`.
+Probado en Windows con XAMPP. Apache debe servir el backend en `http://localhost/tienda/backend` (el proxy de desarrollo y el build lo buscan ahí), así que el proyecto debe estar en la carpeta `tienda` dentro de `htdocs`.
 
-**Requisitos:** XAMPP con PHP 8.2 o posterior y MariaDB 10.4 o posterior; Node.js 20.19 o posterior; Ollama, opcional (sin él, el asistente funciona con las explicaciones de PHP).
+**Requisitos:** XAMPP con PHP 8.2 o posterior y MariaDB 10.4 o posterior; Node.js 22.18 o posterior (los tests de Node ejecutan TypeScript directamente); Ollama, opcional (sin él, el asistente funciona con las explicaciones de PHP).
 
 1. **Clona el proyecto** en la carpeta de Apache:
 
@@ -177,7 +184,7 @@ Probado en Windows con XAMPP. El frontend llama al backend en `http://localhost/
    C:/xampp/mysql/bin/mysql.exe -u root -p --default-character-set=utf8mb4 tienda < migrations/003_create_intentos_login.sql
    ```
 
-   También puedes importar los archivos en ese orden desde phpMyAdmin. El esquema solo crea la estructura, sin datos.
+   También puedes importar los archivos en ese orden desde phpMyAdmin. El esquema solo crea la estructura, sin datos. Las migraciones añaden los perfiles de recomendación (001), la restricción de stock no negativo (002) y el registro de intentos de login fallidos (003), sin el cual el login responde con error.
 
 4. **Configura la conexión.** Copia el archivo de ejemplo y pon tus credenciales de MariaDB:
 
@@ -224,7 +231,7 @@ Probado en Windows con XAMPP. El frontend llama al backend en `http://localhost/
 
 ## Tests
 
-**Backend (PHP).** Tests unitarios sin base de datos: validación de entradas, transiciones de estado de pedido, líneas de pedido, validación de productos y la lógica del asistente (más de 800 comprobaciones en total). Cada archivo se ejecuta por separado:
+**Backend (PHP).** Tests unitarios sin base de datos: validación de entradas, transiciones de estado de pedido (incluido que el panel ofrezca las mismas que el backend), líneas de pedido, validación de productos y la lógica del asistente (819 comprobaciones en total). Cada archivo se ejecuta por separado:
 
 ```bash
 php backend/config/tests/entrada_test.php
@@ -253,11 +260,17 @@ npm run lint
 npm run build
 ```
 
-**Batería del asistente (manual).** 55 consultas reales contra el endpoint, con Apache, MariaDB y Ollama en marcha. Sus expectativas dependen del catálogo de ejemplo de 11 productos, así que con otro catálogo los resultados cambiarán:
+## Mejoras futuras
 
-```bash
-php backend/recomendaciones/tests/bateria_endpoint.php tras
-```
+- **Despliegue configurable.** La URL del backend en el build y el origen admitido por el CORS (`http://localhost:5173`, repetido en 21 endpoints) están fijados para el entorno local. Para publicar la tienda habría que leerlos de la configuración en un único sitio.
+- **Datos de ejemplo.** El esquema crea las tablas vacías. Un script con un catálogo de ejemplo y sus perfiles de recomendación permitiría probar el asistente nada más instalar.
+- **Imágenes de producto propias.** Hoy cada producto guarda la URL de una imagen externa; falta la subida de imágenes desde el panel.
+- **Integración continua.** Ejecutar tests, lint y build en cada push con GitHub Actions, y llevar al repositorio las pruebas HTTP de seguridad (sesión, límite de login, transacciones de stock) que ahora se ejecutan aparte.
+- **Límite de peticiones al asistente.** El endpoint de recomendaciones es público y cada consulta puede llamar a Ollama; igual que el login, debería limitar las peticiones por IP en una ventana de tiempo y responder 429.
+- **Precios actualizados en el checkout.** El total que se muestra antes de confirmar se calcula con los precios guardados en el carrito del navegador. El pedido se cobra siempre con los precios de la base de datos, pero si un precio ha cambiado el cliente vería un total distinto del registrado; el checkout debería pedir los precios actuales antes de confirmar.
+- **Pago y cuenta.** El checkout registra el pedido sin pasarela de pago, y no hay recuperación de contraseña ni verificación del email.
+- **Accesibilidad de las tablas en modo tarjeta.** Al apilarse, las filas dejan de exponerse como tabla a los lectores de pantalla (cada dato conserva su etiqueta visible); se podrían añadir roles ARIA.
+- **Tamaño inicial.** El código principal pesa unos 434 kB sin comprimir; se puede seguir dividiendo, por ejemplo cargando el asistente bajo demanda junto con otras dependencias.
 
 ## Autor
 
