@@ -591,12 +591,12 @@ comprobar(
 // Mensaje sin productos dentro del presupuesto.
 comprobar(
     mensajeSinProductosEnPresupuestoRecomendaciones(['Auriculares'], '100.00', ['nombre' => 'Logitech G Pro X', 'precio' => '129.00']) ===
-        'No hay productos de Auriculares dentro de tu presupuesto (100,00 €). El más barato disponible es «Logitech G Pro X», por 129,00 €.',
+        "No hay productos de Auriculares dentro de tu presupuesto (100,00\u{00A0}€). El más barato disponible es «Logitech G Pro X», por 129,00\u{00A0}€.",
     'indica el más barato de la categoría y su precio'
 );
 comprobar(
     mensajeSinProductosEnPresupuestoRecomendaciones(['Portátiles'], '500.00', ['nombre' => 'X', 'precio' => '1449.00']) ===
-        'No hay productos de Portátiles dentro de tu presupuesto (500,00 €). El más barato disponible es «X», por 1.449,00 €.',
+        "No hay productos de Portátiles dentro de tu presupuesto (500,00\u{00A0}€). El más barato disponible es «X», por 1.449,00\u{00A0}€.",
     'formatea los miles al estilo español'
 );
 comprobar(
@@ -604,7 +604,7 @@ comprobar(
     'sin stock en la categoría no inventa un producto'
 );
 comprobar(
-    mensajeSinProductosEnPresupuestoRecomendaciones([], '50.00', null) === 'No hay productos disponibles dentro de tu presupuesto (50,00 €).',
+    mensajeSinProductosEnPresupuestoRecomendaciones([], '50.00', null) === "No hay productos disponibles dentro de tu presupuesto (50,00\u{00A0}€).",
     'sin categoría pedida el mensaje es genérico'
 );
 

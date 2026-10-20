@@ -8,6 +8,7 @@ import {
   AuthContext,
   type Usuario,
 } from './AuthContext';
+import { API_URL } from '../lib/api';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -26,7 +27,7 @@ function AuthProvider({
     const comprobarSesion = async () => {
       try {
         const respuesta = await fetch(
-          'http://localhost/tienda/backend/auth/me.php',
+          `${API_URL}/auth/me.php`,
           {
             credentials: 'include',
           }

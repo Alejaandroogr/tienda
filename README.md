@@ -212,7 +212,15 @@ Probado en Windows con XAMPP. El frontend llama al backend en `http://localhost/
    npm run dev
    ```
 
-   Abre `http://localhost:5173`. El backend solo acepta peticiones de ese origen.
+   Abre `http://localhost:5173`. En desarrollo el frontend llama al backend con rutas relativas (`/tienda/backend/…`) y el servidor de Vite las reenvía a Apache (`server.proxy` en `vite.config.ts`), así que el navegador solo habla con un origen. En el build de producción se mantiene la URL absoluta `http://localhost/tienda/backend`.
+
+8. **Prueba desde el móvil** (opcional), con el móvil y el ordenador en la misma red:
+
+   ```bat
+   npm run dev -- --host
+   ```
+
+   Vite muestra la dirección de red (por ejemplo, `http://192.168.1.20:5173`); ábrela en el móvil. Las peticiones al backend pasan por el proxy, de modo que la cookie de sesión funciona igual que en el ordenador y se mantiene `HttpOnly` y `SameSite=Lax`. El backend solo admite el origen `http://localhost:5173`: el proxy lo envía en nombre de la app únicamente cuando la petición viene de la propia app, y cualquier otro origen se sigue rechazando. Puede que el cortafuegos de Windows pida permiso para que Node acepte conexiones de la red local.
 
 ## Tests
 

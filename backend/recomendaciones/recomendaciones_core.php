@@ -951,7 +951,8 @@ function mensajeVariosUsosSinResultadoRecomendaciones(array $etiquetasUsos): str
 
 function formatearPrecioRecomendaciones(string $precio): string
 {
-    return number_format((float) $precio, 2, ',', '.') . ' €';
+    // Espacio no separable antes de «€»: el precio no se parte en dos líneas (igual que en el frontend).
+    return number_format((float) $precio, 2, ',', '.') . "\u{00A0}€";
 }
 
 /**

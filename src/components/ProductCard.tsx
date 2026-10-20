@@ -10,6 +10,7 @@ import { useCarrito } from '../context/useCarrito';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
+import { ESPACIO_NO_SEPARABLE, formatearImporte } from '../lib/formato';
 
 interface ProductCardProps {
   producto: Producto;
@@ -72,7 +73,7 @@ function ProductCard({ producto }: ProductCardProps) {
 
         <div className="product-bottom store-product-bottom">
           <span className="product-price">
-            {Number(producto.precio).toFixed(2)} <small>€</small>
+            {formatearImporte(producto.precio)}{ESPACIO_NO_SEPARABLE}<small>€</small>
           </span>
           <Button
             onClick={() => agregarAlCarrito(producto)}

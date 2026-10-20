@@ -9,12 +9,13 @@ import AdminPagination from '../../components/admin/AdminPagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import AdminTable from '../../components/admin/AdminTable';
+import TablaAdaptable from '../../components/TablaAdaptable';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
+import { API_URL } from '../../lib/api';
 
 interface Categoria {
   id: number;
@@ -72,7 +73,7 @@ function AdminCategorias() {
 
         const respuesta =
           await fetch(
-            'http://localhost/tienda/backend/categorias/listar.php'
+            `${API_URL}/categorias/listar.php`
           );
 
         const datos =
@@ -114,7 +115,7 @@ function AdminCategorias() {
   const recargarCategorias = async () => {
     const respuesta =
       await fetch(
-        'http://localhost/tienda/backend/categorias/listar.php'
+        `${API_URL}/categorias/listar.php`
       );
 
     const datos =
@@ -181,8 +182,8 @@ function AdminCategorias() {
         categoriaEditando !== null;
 
       const url = esEdicion
-        ? 'http://localhost/tienda/backend/categorias/editar.php'
-        : 'http://localhost/tienda/backend/categorias/crear.php';
+        ? `${API_URL}/categorias/editar.php`
+        : `${API_URL}/categorias/crear.php`;
 
       const metodo = esEdicion
         ? 'PUT'
@@ -258,7 +259,7 @@ function AdminCategorias() {
 
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/categorias/eliminar.php',
+          `${API_URL}/categorias/eliminar.php`,
           {
             method: 'DELETE',
             headers: {
@@ -617,7 +618,7 @@ function AdminCategorias() {
 
               <div className="admin-products-table">
 
-                <AdminTable className="admin-data-table">
+                <TablaAdaptable ancho="estrecha" className="admin-data-table">
 
                   <thead>
 
@@ -648,15 +649,15 @@ function AdminCategorias() {
                           key={categoria.id}
                         >
 
-                          <td>
+                          <td data-label="ID">
                             #{categoria.id}
                           </td>
 
-                          <td>
+                          <td data-label="Nombre">
                             <Badge variant="secondary" className="category-name-badge">{categoria.nombre}</Badge>
                           </td>
 
-                          <td>
+                          <td data-label="Acciones">
 
                             <div className="admin-product-actions">
 
@@ -702,7 +703,7 @@ function AdminCategorias() {
 
                   </tbody>
 
-                </AdminTable>
+                </TablaAdaptable>
 
               </div>
 

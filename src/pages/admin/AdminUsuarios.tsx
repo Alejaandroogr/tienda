@@ -9,8 +9,9 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import AdminTable from '../../components/admin/AdminTable';
+import TablaAdaptable from '../../components/TablaAdaptable';
 import { toast } from 'sonner';
+import { API_URL } from '../../lib/api';
 
 interface UsuarioAdmin {
   id: number;
@@ -73,7 +74,7 @@ function AdminUsuarios() {
 
         const respuesta =
           await fetch(
-            'http://localhost/tienda/backend/usuarios/listar-admin.php',
+            `${API_URL}/usuarios/listar-admin.php`,
             {
               credentials: 'include',
             }
@@ -126,7 +127,7 @@ function AdminUsuarios() {
 
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/usuarios/cambiar-rol.php',
+          `${API_URL}/usuarios/cambiar-rol.php`,
           {
             method: 'PUT',
             headers: {
@@ -407,7 +408,7 @@ function AdminUsuarios() {
 
               <div className="admin-products-table">
 
-                <AdminTable className="admin-data-table">
+                <TablaAdaptable className="admin-data-table">
 
                   <thead>
 
@@ -448,11 +449,11 @@ function AdminUsuarios() {
                           }
                         >
 
-                          <td>
+                          <td data-label="ID">
                             #{usuarioActual.id}
                           </td>
 
-                          <td>
+                          <td data-label="Usuario">
 
                             <strong>
                               {
@@ -462,19 +463,19 @@ function AdminUsuarios() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Email">
                             {
                               usuarioActual.email
                             }
                           </td>
 
-                          <td>
+                          <td data-label="Fecha de registro">
                             {formatearFecha(
                               usuarioActual.creado_en
                             )}
                           </td>
 
-                          <td>
+                          <td data-label="Rol">
 
                             <div className="admin-user-role-cell">
                               <Badge variant={usuarioActual.rol === 'admin' ? 'default' : 'secondary'} className={`role-badge role-${usuarioActual.rol}`}>{usuarioActual.rol === 'admin' ? 'Administrador' : 'Cliente'}</Badge>
@@ -494,7 +495,7 @@ function AdminUsuarios() {
 
                   </tbody>
 
-                </AdminTable>
+                </TablaAdaptable>
 
               </div>
 

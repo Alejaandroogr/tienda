@@ -8,7 +8,9 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
-import { Table } from '../components/ui/table';
+import TablaAdaptable from '../components/TablaAdaptable';
+import { formatearPrecio } from '../lib/formato';
+import { API_URL } from '../lib/api';
 
 interface DetallePedido {
   id: number;
@@ -64,7 +66,7 @@ function PedidoDetalle() {
 
       try {
         const respuesta = await fetch(
-          `http://localhost/tienda/backend/pedidos/obtener.php?id=${id}`,
+          `${API_URL}/pedidos/obtener.php?id=${id}`,
           {
             credentials: 'include',
             signal: controlador.signal,
@@ -227,7 +229,7 @@ function PedidoDetalle() {
           </div>
           <div>
             <span>Total del pedido</span>
-            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+            <strong>{formatearPrecio(pedido.total)}</strong>
           </div>
         </Card>
 
@@ -245,45 +247,40 @@ function PedidoDetalle() {
             </Badge>
           </div>
           <Separator />
-          <div className="order-detail-table-scroll">
-            <Table className="order-detail-table">
-              <thead>
-                <tr>
-                  <th>Producto</th>
-                  <th>Cantidad</th>
-                  <th>Precio</th>
-                  <th>Subtotal</th>
+          <TablaAdaptable ancho="estrecha" className="order-detail-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedido.detalles.map((detalle) => (
+                <tr key={detalle.id}>
+                  <td className="order-detail-table-product-cell" data-label="Producto">
+                    <div className="order-detail-table-product">
+                      {detalle.imagen ? (
+                        <img src={detalle.imagen} alt="" />
+                      ) : (
+                        <span className="order-detail-table-placeholder" />
+                      )}
+                      <strong>{detalle.nombre}</strong>
+                    </div>
+                  </td>
+                  <td data-label="Cantidad">{detalle.cantidad}</td>
+                  <td data-label="Precio">{formatearPrecio(detalle.precio)}</td>
+                  <td data-label="Subtotal">
+                    {formatearPrecio(Number(detalle.precio) * detalle.cantidad)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {pedido.detalles.map((detalle) => (
-                  <tr key={detalle.id}>
-                    <td className="order-detail-table-product-cell">
-                      <div className="order-detail-table-product">
-                        {detalle.imagen ? (
-                          <img src={detalle.imagen} alt="" />
-                        ) : (
-                          <span className="order-detail-table-placeholder" />
-                        )}
-                        <strong>{detalle.nombre}</strong>
-                      </div>
-                    </td>
-                    <td data-label="Cantidad">{detalle.cantidad}</td>
-                    <td data-label="Precio">{Number(detalle.precio).toFixed(2)} €</td>
-                    <td data-label="Subtotal">
-                      {(
-                        Number(detalle.precio) * detalle.cantidad
-                      ).toFixed(2)}{' '}
-                      €
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
+              ))}
+            </tbody>
+          </TablaAdaptable>
           <div className="order-detail-total-row">
             <span>Total del pedido</span>
-            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+            <strong>{formatearPrecio(pedido.total)}</strong>
           </div>
         </Card>
 

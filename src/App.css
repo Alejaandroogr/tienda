@@ -2121,7 +2121,8 @@ main {
 }
 
 .admin-section-header h2 {
-  margin: 0 0 25px;
+  /* Sin margen propio: el de .admin-section-header ya separa el título de los filtros. */
+  margin: 0;
   font-size: 24px;
 }
 
@@ -3321,21 +3322,14 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .admin-category-dialog .admin-form-grid { grid-template-columns: 1fr; }
 .admin-category-dialog .admin-form-full { grid-column: auto; }
 .admin-filter-select { width: min(260px,100%); height: 40px; border-color: #e0e6ed; background: white; font-size: 12px; }
+/* En móvil los filtros van en columna: el selector ocupa el mismo ancho que el buscador. */
+@media (max-width: 700px) { .admin-filter-select { width: 100%; } }
+/* Contador de la cabecera (pedidos): separado del subtítulo. */
+.admin-header > .admin-order-count { margin-top: 14px; }
 .admin-data-table { min-width: 700px; border-collapse: collapse; }
 .admin-data-table [data-slot="table-head"] { height: 42px; padding: 0 15px; border-bottom: 1px solid #e9edf2; background: #f8fafc; color: #728094; font-size: 10px; font-weight: 650; letter-spacing: .045em; text-transform: uppercase; }
 .admin-data-table [data-slot="table-cell"] { height: 52px; padding: 8px 15px; border-bottom: 1px solid #edf0f4; color: #3d4c60; font-size: 11px; }
 .admin-data-table [data-slot="table-row"]:hover { background: #fafcff; }
-/* AdminTable: la columna del nombre (la segunda en las cuatro tablas: producto, categoría, cliente, usuario) queda fija y hay sombra en el borde por el que hay más contenido. */
-.admin-table-scroll { position: relative; }
-.admin-table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: 28px; background: linear-gradient(to left, rgba(15,30,50,.16), rgba(15,30,50,0)); opacity: 0; pointer-events: none; transition: opacity .2s ease; }
-.admin-table-scroll[data-sombra-fin]::after { opacity: 1; }
-.admin-table-scroll [data-slot="table-container"] { overscroll-behavior-x: contain; }
-.admin-table-scroll :is(th, td):nth-child(2) { position: sticky; left: 0; z-index: 1; background: #fff; transition: box-shadow .2s ease; }
-.admin-table-scroll th:nth-child(2) { background: #f8fafc; }
-.admin-table-scroll tbody tr:hover > td:nth-child(2) { background: #fafcff; }
-.admin-table-scroll[data-sombra-inicio] :is(th, td):nth-child(2) { box-shadow: 6px 0 8px -6px rgba(15,30,50,.3); }
-/* En móvil la columna fija no puede comerse la pantalla: 150px, con el texto en varias líneas. */
-@media (max-width: 600px) { .admin-table-scroll :is(th, td):nth-child(2) { width: 150px; min-width: 150px; max-width: 150px; white-space: normal; overflow-wrap: anywhere; } .admin-table-scroll .admin-product-name { gap: 8px; } .admin-table-scroll .admin-product-name img { width: 34px; height: 34px; } }
 .admin-data-table .category-name-badge { height: 25px; background: #f2f5f9; color: #53647a; font-size: 10px; }
 .admin-order-state-cell, .admin-user-role-cell { display: flex; align-items: center; gap: 8px; }
 .admin-state-badge, .role-badge { height: 23px; border: 0; font-size: 9px; text-transform: capitalize; }
@@ -3827,14 +3821,6 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
   font-size: 17px;
 }
 
-.order-detail-table-scroll {
-  overflow-x: auto;
-}
-
-.order-detail-table {
-  min-width: 560px;
-}
-
 .order-detail-table th {
   height: 42px;
   color: #788598;
@@ -3870,20 +3856,6 @@ body { font-family: 'Geist Variable', sans-serif; background: #f8fafc; color: va
 .order-detail-table-product strong {
   color: #33445a;
   font-size: 11px;
-}
-
-/* En móvil cada línea del pedido es una tarjeta con todos sus datos, sin scroll horizontal. */
-@media (max-width: 600px) {
-  .order-detail-table { min-width: 0; }
-  .order-detail-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .order-detail-table tbody { display: grid; gap: 10px; padding: 12px 0; }
-  .order-detail-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; padding: 12px; border: 1px solid #e7ecf2; border-radius: 10px; }
-  .order-detail-table tr:hover { background: transparent; }
-  .order-detail-table td { display: grid; gap: 3px; height: auto; padding: 0; border: 0; color: #33445a; font-weight: 600; white-space: normal; }
-  .order-detail-table td[data-label]::before { content: attr(data-label); color: #788598; font-size: 10px; font-weight: 600; text-transform: uppercase; }
-  .order-detail-table .order-detail-table-product-cell { grid-column: 1 / -1; }
-  .order-detail-table-product { min-width: 0; }
-  .order-detail-table-product strong { font-size: 13px; }
 }
 
 .order-detail-total-row {
@@ -4447,4 +4419,49 @@ body:has(.recommendation-assistant-trigger) .footer {
 .app-content {
   display: flow-root;
   flex: 1 0 auto;
+}
+
+/*
+ * TablaAdaptable: tabla normal cuando cabe y tarjetas apiladas cuando no, sin scroll
+ * horizontal. Lo decide una container query según el ancho real de la tabla.
+ * Umbrales, por encima del ancho mínimo medido de cada tabla con datos reales:
+ * «ancha» 710 px (productos 606, usuarios 687, pedidos 697) y «estrecha» 440 px
+ * (categorías 338, detalle de pedido 332).
+ */
+.tabla-adaptable { width: 100%; container-type: inline-size; }
+.tabla-adaptable-ancha { container-name: tabla-ancha; }
+.tabla-adaptable-estrecha { container-name: tabla-estrecha; }
+/* Los mínimos antiguos (560–800 px) eran los que forzaban el scroll horizontal. */
+.tabla-adaptable > table { min-width: 0; }
+.tabla-adaptable :is(th, td) { overflow-wrap: break-word; }
+
+/* Modo tarjeta: cada fila es una tarjeta y cada celda una línea «Etiqueta: valor». */
+@container tabla-ancha (max-width: 709.98px) {
+  .tabla-adaptable > table, .tabla-adaptable tbody, .tabla-adaptable tr { display: block; width: auto; }
+  .tabla-adaptable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabla-adaptable tbody { display: grid; gap: 10px; padding: 12px; }
+  .tabla-adaptable tr { padding: 4px 14px; border: 1px solid #e7ecf2; border-radius: 10px; background: #fff; }
+  .tabla-adaptable td { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; column-gap: 10px; width: auto; height: auto; padding: 9px 0; border: 0; border-bottom: 1px solid #f0f3f7; text-align: left; }
+  .tabla-adaptable td:last-child { border-bottom: 0; }
+  .tabla-adaptable td[data-label]::before { content: attr(data-label) ':'; color: #6b788a; font-size: 11px; font-weight: 600; }
+  /* Los grupos de controles (estado, rol, acciones) pasan a otra línea si no caben. */
+  .tabla-adaptable :is(.admin-order-state-cell, .admin-user-role-cell, .admin-product-actions) { flex-wrap: wrap; min-width: 0; }
+  /* El contenido de cada celda se ajusta a su columna (anula anchos mínimos pensados para la tabla). */
+  .tabla-adaptable td > * { min-width: 0; max-width: 100%; }
+  .tabla-adaptable td :is(strong, span) { min-width: 0; white-space: normal; }
+}
+
+@container tabla-estrecha (max-width: 439.98px) {
+  .tabla-adaptable > table, .tabla-adaptable tbody, .tabla-adaptable tr { display: block; width: auto; }
+  .tabla-adaptable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .tabla-adaptable tbody { display: grid; gap: 10px; padding: 12px; }
+  .tabla-adaptable tr { padding: 4px 14px; border: 1px solid #e7ecf2; border-radius: 10px; background: #fff; }
+  .tabla-adaptable td { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: center; column-gap: 10px; width: auto; height: auto; padding: 9px 0; border: 0; border-bottom: 1px solid #f0f3f7; text-align: left; }
+  .tabla-adaptable td:last-child { border-bottom: 0; }
+  .tabla-adaptable td[data-label]::before { content: attr(data-label) ':'; color: #6b788a; font-size: 11px; font-weight: 600; }
+  /* Los grupos de controles (estado, rol, acciones) pasan a otra línea si no caben. */
+  .tabla-adaptable :is(.admin-order-state-cell, .admin-user-role-cell, .admin-product-actions) { flex-wrap: wrap; min-width: 0; }
+  /* El contenido de cada celda se ajusta a su columna (anula anchos mínimos pensados para la tabla). */
+  .tabla-adaptable td > * { min-width: 0; max-width: 100%; }
+  .tabla-adaptable td :is(strong, span) { min-width: 0; white-space: normal; }
 }

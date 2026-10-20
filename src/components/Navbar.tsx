@@ -6,6 +6,7 @@ import { useAuth } from '../context/useAuth';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { toast } from 'sonner';
+import { API_URL } from '../lib/api';
 
 function Navbar() {
   const { carrito } = useCarrito();
@@ -18,7 +19,7 @@ function Navbar() {
 
   const manejarCerrarSesion = async () => {
     try {
-      await fetch('http://localhost/tienda/backend/usuarios/logout.php', {
+      await fetch(`${API_URL}/usuarios/logout.php`, {
         method: 'POST',
         credentials: 'include',
       });

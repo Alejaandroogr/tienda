@@ -11,7 +11,7 @@ import AdminPagination from '../../components/admin/AdminPagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import AdminTable from '../../components/admin/AdminTable';
+import TablaAdaptable from '../../components/TablaAdaptable';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -27,6 +27,8 @@ import {
   PERFIL_VACIO,
   type EstadoCargaPerfil,
 } from '../../services/perfilRecomendacionService';
+import { formatearPrecio } from '../../lib/formato';
+import { API_URL } from '../../lib/api';
 
 interface Categoria {
   id: number;
@@ -129,10 +131,10 @@ function AdminProductos() {
           respuestaCategorias,
         ] = await Promise.all([
           fetch(
-            'http://localhost/tienda/backend/productos/listar.php'
+            `${API_URL}/productos/listar.php`
           ),
           fetch(
-            'http://localhost/tienda/backend/categorias/listar.php'
+            `${API_URL}/categorias/listar.php`
           ),
         ]);
 
@@ -358,7 +360,7 @@ function AdminProductos() {
   const recargarProductos = async () => {
     const respuesta =
       await fetch(
-        'http://localhost/tienda/backend/productos/listar.php'
+        `${API_URL}/productos/listar.php`
       );
 
     const datos =
@@ -431,7 +433,7 @@ function AdminProductos() {
       const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/crear.php',
+          `${API_URL}/productos/crear.php`,
           {
             method: 'POST',
             headers: {
@@ -546,7 +548,7 @@ function AdminProductos() {
       const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/editar.php',
+          `${API_URL}/productos/editar.php`,
           {
             method: 'PUT',
             headers: {
@@ -615,7 +617,7 @@ function AdminProductos() {
 
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/eliminar.php',
+          `${API_URL}/productos/eliminar.php`,
           {
             method: 'DELETE',
             headers: {
@@ -1115,7 +1117,7 @@ function AdminProductos() {
 
               <div className="admin-products-table">
 
-                <AdminTable>
+                <TablaAdaptable>
 
                   <thead>
 
@@ -1158,11 +1160,11 @@ function AdminProductos() {
                           key={producto.id}
                         >
 
-                          <td>
+                          <td data-label="ID">
                             #{producto.id}
                           </td>
 
-                          <td>
+                          <td data-label="Producto">
 
                             <div className="admin-product-name">
 
@@ -1181,19 +1183,17 @@ function AdminProductos() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Categoría">
                             {producto.categoria}
                           </td>
 
-                          <td>
+                          <td data-label="Precio">
 
-                            {Number(
-                              producto.precio
-                            ).toFixed(2)} €
+                            {formatearPrecio(producto.precio)}
 
                           </td>
 
-                          <td>
+                          <td data-label="Stock">
 
                               <Badge variant="outline"
                               className={
@@ -1213,7 +1213,7 @@ function AdminProductos() {
 
                           </td>
 
-                          <td>
+                          <td data-label="Acciones">
 
                             <div className="admin-product-actions">
 
@@ -1259,7 +1259,7 @@ function AdminProductos() {
 
                   </tbody>
 
-                </AdminTable>
+                </TablaAdaptable>
 
               </div>
 

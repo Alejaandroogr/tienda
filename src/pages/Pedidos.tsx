@@ -8,6 +8,8 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
+import { formatearPrecio } from '../lib/formato';
+import { API_URL } from '../lib/api';
 
 function variantEstado(estado: string): 'default' | 'secondary' | 'outline' | 'destructive' {
   if (estado === 'entregado') return 'secondary';
@@ -44,7 +46,7 @@ function Pedidos() {
         setError('');
 
         const respuesta = await fetch(
-          'http://localhost/tienda/backend/pedidos/listar.php',
+          `${API_URL}/pedidos/listar.php`,
           {
             credentials: 'include',
           }
@@ -176,10 +178,7 @@ function Pedidos() {
                       </span>
 
                       <strong>
-                        {Number(
-                          pedido.total
-                        ).toFixed(2)}{' '}
-                        €
+                        {formatearPrecio(pedido.total)}
                       </strong>
                     </div>
                   </div>

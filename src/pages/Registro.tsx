@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { API_URL } from '../lib/api';
 
 function Registro() {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ function Registro() {
     }
     try {
       setCargando(true);
-      const respuesta = await fetch('http://localhost/tienda/backend/usuarios/registrar.php', {
+      const respuesta = await fetch(`${API_URL}/usuarios/registrar.php`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), password }),
       });
       const datos = await respuesta.json();

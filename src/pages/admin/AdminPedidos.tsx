@@ -5,8 +5,10 @@ import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
-import AdminTable from '../../components/admin/AdminTable';
+import TablaAdaptable from '../../components/TablaAdaptable';
 import { toast } from 'sonner';
+import { formatearPrecio } from '../../lib/formato';
+import { API_URL } from '../../lib/api';
 
 interface PedidoAdmin {
   id: number;
@@ -72,7 +74,7 @@ function AdminPedidos() {
         setError('');
 
         const respuesta = await fetch(
-          'http://localhost/tienda/backend/pedidos/listar-admin.php',
+          `${API_URL}/pedidos/listar-admin.php`,
           {
             method: 'GET',
             credentials: 'include',
@@ -114,7 +116,7 @@ function AdminPedidos() {
       setError('');
 
       const respuesta = await fetch(
-        'http://localhost/tienda/backend/pedidos/cambiar-estado.php',
+        `${API_URL}/pedidos/cambiar-estado.php`,
         {
           method: 'PUT',
           headers: {
@@ -246,13 +248,13 @@ function AdminPedidos() {
     <main className="admin-container">
       <div className="admin-header">
         <div>
-          <p className="admin-eyebrow">
+          <p className="admin-subtitle">
             ADMINISTRACIÓN
           </p>
 
           <h1>Pedidos</h1>
 
-          <p className="admin-subtitle">
+          <p>
             Gestiona los pedidos realizados por los
             clientes.
           </p>
@@ -304,7 +306,7 @@ function AdminPedidos() {
         ) : (
           <>
             <div className="admin-table-wrapper">
-              <AdminTable className="admin-products-table">
+              <TablaAdaptable className="admin-products-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -318,11 +320,11 @@ function AdminPedidos() {
                 <tbody>
                   {pedidosPagina.map((pedido) => (
                     <tr key={pedido.id}>
-                      <td>
+                      <td data-label="ID">
                         #{pedido.id}
                       </td>
 
-                      <td>
+                      <td data-label="Cliente">
                         <div className="admin-order-client">
                           <strong>
                             {pedido.usuario_nombre}
@@ -334,22 +336,19 @@ function AdminPedidos() {
                         </div>
                       </td>
 
-                      <td>
+                      <td data-label="Fecha">
                         {formatearFecha(
                           pedido.creado_en
                         )}
                       </td>
 
-                      <td>
+                      <td data-label="Total">
                         <strong>
-                          {Number(
-                            pedido.total
-                          ).toFixed(2)}{' '}
-                          €
+                          {formatearPrecio(pedido.total)}
                         </strong>
                       </td>
 
-                      <td>
+                      <td data-label="Estado">
                         <div className="admin-order-state-cell">
                         <Badge variant={pedido.estado === 'cancelado' ? 'destructive' : pedido.estado === 'entregado' ? 'secondary' : pedido.estado === 'enviado' ? 'default' : 'outline'} className={`admin-state-badge state-${pedido.estado}`}>{pedido.estado}</Badge>
                         <Select items={opcionesEstado} value={pedido.estado} onValueChange={(value) => { if (value && value !== pedido.estado) void cambiarEstado(pedido.id, value); }}>
@@ -365,7 +364,7 @@ function AdminPedidos() {
                     </tr>
                   ))}
                 </tbody>
-              </AdminTable>
+              </TablaAdaptable>
             </div>
 
             <AdminPagination
