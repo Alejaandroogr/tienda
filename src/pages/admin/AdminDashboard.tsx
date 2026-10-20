@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { toast } from 'sonner';
+import { formatearPrecio } from '../../lib/formato';
 
 interface DashboardData {
   usuarios: { total: number };
@@ -66,7 +67,7 @@ function AdminDashboard() {
     { label: 'Usuarios registrados', value: datos.usuarios.total.toLocaleString('es-ES'), icon: Users, href: '/admin/usuarios', caption: 'Ver usuarios' },
     { label: 'Productos', value: datos.productos.total.toLocaleString('es-ES'), icon: Boxes, href: '/admin/productos', caption: 'Gestionar catálogo' },
     { label: 'Pedidos', value: datos.pedidos.total.toLocaleString('es-ES'), icon: ClipboardList, href: '/admin/pedidos', caption: 'Ver pedidos' },
-    { label: 'Ventas acumuladas', value: `${Number(datos.ventas.total).toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`, icon: CircleDollarSign, href: '/admin/pedidos', caption: 'Revisar pedidos' },
+    { label: 'Ventas acumuladas', value: formatearPrecio(datos.ventas.total), icon: CircleDollarSign, href: '/admin/pedidos', caption: 'Revisar pedidos' },
   ] : [];
 
   return (

@@ -7,6 +7,7 @@ import { obtenerProductoPorId } from '../services/productosService';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
+import { ESPACIO_NO_SEPARABLE, formatearImporte } from '../lib/formato';
 
 function ProductoDetalle() {
   const { id } = useParams();
@@ -93,7 +94,7 @@ function ProductoDetalle() {
           </Badge>
           <Card className="store-purchase-card">
             <div className="store-detail-price">
-              {Number(producto.precio).toFixed(2)} <span>€</span>
+              {formatearImporte(producto.precio)}{ESPACIO_NO_SEPARABLE}<span>€</span>
             </div>
             <Button
               size="lg"

@@ -9,6 +9,7 @@ import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import TablaAdaptable from '../components/TablaAdaptable';
+import { formatearPrecio } from '../lib/formato';
 
 interface DetallePedido {
   id: number;
@@ -227,7 +228,7 @@ function PedidoDetalle() {
           </div>
           <div>
             <span>Total del pedido</span>
-            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+            <strong>{formatearPrecio(pedido.total)}</strong>
           </div>
         </Card>
 
@@ -268,12 +269,9 @@ function PedidoDetalle() {
                     </div>
                   </td>
                   <td data-label="Cantidad">{detalle.cantidad}</td>
-                  <td data-label="Precio">{Number(detalle.precio).toFixed(2)} €</td>
+                  <td data-label="Precio">{formatearPrecio(detalle.precio)}</td>
                   <td data-label="Subtotal">
-                    {(
-                      Number(detalle.precio) * detalle.cantidad
-                    ).toFixed(2)}{' '}
-                    €
+                    {formatearPrecio(Number(detalle.precio) * detalle.cantidad)}
                   </td>
                 </tr>
               ))}
@@ -281,7 +279,7 @@ function PedidoDetalle() {
           </TablaAdaptable>
           <div className="order-detail-total-row">
             <span>Total del pedido</span>
-            <strong>{Number(pedido.total).toFixed(2)} €</strong>
+            <strong>{formatearPrecio(pedido.total)}</strong>
           </div>
         </Card>
 

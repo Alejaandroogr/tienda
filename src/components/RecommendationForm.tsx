@@ -10,6 +10,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { ArrowUpRight, Cpu, LoaderCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ErrorRecomendaciones, solicitarRecomendaciones } from '../services/recomendacionesService';
+import { formatearPrecio } from '../lib/formato';
 import type { Producto } from '../types/Producto';
 import type {
   RespuestaRecomendaciones,
@@ -64,14 +65,6 @@ function mensajeErrorRecomendaciones(error: unknown): string {
 // Array.from cuenta caracteres (un emoji es uno), como el backend; .length contaría unidades UTF-16.
 function validarLongitud(campo: string, maximo: number): boolean {
   return Array.from(campo.trim()).length > 0 && Array.from(campo.trim()).length <= maximo;
-}
-
-function formatearPrecio(precio: string): string {
-  const valor = Number(precio);
-
-  return Number.isFinite(valor)
-    ? valor.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
-    : `${precio} €`;
 }
 
 function TarjetaProductoRecomendado({
@@ -193,7 +186,7 @@ function RecommendationForm() {
         Math.abs(valorPresupuesto * 100 - Math.round(valorPresupuesto * 100)) > 1e-7
       )
     ) {
-      setError('Indica un presupuesto mayor que 0, con hasta dos decimales y no superior a 10 000 000 €.');
+      setError('Indica un presupuesto mayor que 0, con hasta dos decimales y no superior a 10.000.000 €.');
       setRespuesta(null);
       presupuestoInput.focus();
       return;

@@ -27,6 +27,7 @@ import {
   PERFIL_VACIO,
   type EstadoCargaPerfil,
 } from '../../services/perfilRecomendacionService';
+import { formatearPrecio } from '../../lib/formato';
 
 interface Categoria {
   id: number;
@@ -1187,9 +1188,7 @@ function AdminProductos() {
 
                           <td data-label="Precio">
 
-                            {Number(
-                              producto.precio
-                            ).toFixed(2)} €
+                            {formatearPrecio(producto.precio)}
 
                           </td>
 

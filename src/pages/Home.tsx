@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
+import { formatearPrecio } from '../lib/formato';
 
 const productosPorPagina = 9;
 
@@ -228,8 +229,8 @@ function Home() {
           <div className="price-filter store-price-filter">
             <div className="price-filter-title">Rango de precio</div>
             <div className="price-filter-values">
-              <span>{rangoPrecio[0].toLocaleString('es-ES')} €</span>
-              <span>{rangoPrecio[1].toLocaleString('es-ES')} €</span>
+              <span>{formatearPrecio(rangoPrecio[0])}</span>
+              <span>{formatearPrecio(rangoPrecio[1])}</span>
             </div>
             <Slider
               aria-label="Rango de precio"

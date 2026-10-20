@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import TablaAdaptable from '../../components/TablaAdaptable';
 import { toast } from 'sonner';
+import { formatearPrecio } from '../../lib/formato';
 
 interface PedidoAdmin {
   id: number;
@@ -342,10 +343,7 @@ function AdminPedidos() {
 
                       <td data-label="Total">
                         <strong>
-                          {Number(
-                            pedido.total
-                          ).toFixed(2)}{' '}
-                          €
+                          {formatearPrecio(pedido.total)}
                         </strong>
                       </td>
 

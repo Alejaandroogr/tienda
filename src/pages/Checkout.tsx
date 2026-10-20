@@ -15,6 +15,7 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
+import { formatearPrecio } from '../lib/formato';
 
 function Checkout() {
   const {
@@ -214,13 +215,7 @@ function Checkout() {
                   </div>
 
                   <strong>
-                    {(
-                      Number(
-                        item.producto.precio
-                      ) *
-                      item.cantidad
-                    ).toFixed(2)}{' '}
-                    €
+                    {formatearPrecio(Number(item.producto.precio) * item.cantidad)}
                   </strong>
                 </article>
               ))}
@@ -255,7 +250,7 @@ function Checkout() {
               <span>Total</span>
 
               <strong>
-                {total.toFixed(2)} €
+                {formatearPrecio(total)}
               </strong>
             </div>
 

@@ -199,7 +199,7 @@ comprobar(mensajeSinStockRecomendaciones(['Procesadores'], 'AMD Ryzen 7 9700X') 
 comprobar(mensajeSinStockRecomendaciones(['Procesadores'], null) === 'No hay procesadores disponibles ahora mismo.', 'sin stock');
 comprobar(
     mensajeMasBaratoQueCumpleRecomendaciones('500.00', 'jugar', ['nombre' => 'ASUS TUF Gaming A15', 'precio' => '899.99']) ===
-        'Ninguno de los productos que cumplen entra en tu presupuesto (500,00 €). El más barato que cumple para jugar es «ASUS TUF Gaming A15», por 899,99 €.',
+        "Ninguno de los productos que cumplen entra en tu presupuesto (500,00\u{00A0}€). El más barato que cumple para jugar es «ASUS TUF Gaming A15», por 899,99\u{00A0}€.",
     'presupuesto insuficiente: el más barato que cumple el uso'
 );
 comprobar(str_contains(mensajeMasBaratoQueCumpleRecomendaciones('10.00', null, ['nombre' => 'X', 'precio' => '20.00']), 'que cumple lo que pides'), 'presupuesto insuficiente sin uso');

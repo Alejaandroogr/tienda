@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
+import { formatearPrecio } from '../lib/formato';
 
 function variantEstado(estado: string): 'default' | 'secondary' | 'outline' | 'destructive' {
   if (estado === 'entregado') return 'secondary';
@@ -176,10 +177,7 @@ function Pedidos() {
                       </span>
 
                       <strong>
-                        {Number(
-                          pedido.total
-                        ).toFixed(2)}{' '}
-                        €
+                        {formatearPrecio(pedido.total)}
                       </strong>
                     </div>
                   </div>

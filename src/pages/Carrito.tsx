@@ -15,6 +15,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
+import { formatearPrecio } from '../lib/formato';
 
 function Carrito() {
   const { carrito, aumentarCantidad, disminuirCantidad, eliminarDelCarrito } = useCarrito();
@@ -45,13 +46,13 @@ function Carrito() {
           <section className="store-cart-items" aria-label="Productos en el carrito">
             {carrito.map(({ producto, cantidad }) => <Card className="store-cart-item" key={producto.id}>
               <Link to={`/productos/${producto.id}`} className="store-cart-image">{producto.imagen ? <img src={producto.imagen} alt={producto.nombre} /> : <PackageOpen size={25} />}</Link>
-              <div className="store-cart-product-info"><Badge variant="secondary">{producto.categoria}</Badge><Link to={`/productos/${producto.id}`}><h2>{producto.nombre}</h2></Link><p>{Number(producto.precio).toFixed(2)} € / unidad</p>
+              <div className="store-cart-product-info"><Badge variant="secondary">{producto.categoria}</Badge><Link to={`/productos/${producto.id}`}><h2>{producto.nombre}</h2></Link><p>{formatearPrecio(producto.precio)} / unidad</p>
                 <div className="store-cart-controls"><div className="store-quantity" aria-label={`Cantidad: ${cantidad}`}><Button variant="outline" size="icon-sm" aria-label="Reducir cantidad" onClick={() => disminuirCantidad(producto.id)}><Minus size={14} /></Button><span>{cantidad}</span><Button variant="outline" size="icon-sm" aria-label="Aumentar cantidad" onClick={() => aumentarCantidad(producto.id)} disabled={cantidad >= producto.stock}><Plus size={14} /></Button></div><Button variant="ghost" className="store-remove-button" onClick={() => eliminarDelCarrito(producto.id)}><Trash2 size={15} /> Quitar</Button></div>
               </div>
-              <strong className="store-cart-subtotal">{(Number(producto.precio) * cantidad).toFixed(2)} €</strong>
+              <strong className="store-cart-subtotal">{formatearPrecio(Number(producto.precio) * cantidad)}</strong>
             </Card>)}
           </section>
-          <Card className="store-cart-summary"><p className="eyebrow">RESUMEN</p><h2>Tu pedido</h2><div className="store-summary-line"><span>Productos ({unidades})</span><span>{total.toFixed(2)} €</span></div><div className="store-summary-line"><span>Envío</span><Badge variant="secondary">Gratis</Badge></div><Separator /><div className="store-summary-total"><span>Total</span><strong>{total.toFixed(2)} €</strong></div><p className="store-tax-note">Impuestos incluidos</p><Button size="lg" className="store-checkout-button" onClick={() => navigate(usuario ? '/checkout' : '/login')}>Continuar al checkout <ArrowRight size={16} /></Button><div className="store-summary-assurance"><ShieldCheck size={16} /> Pago seguro · <Truck size={16} /> Envío gratuito</div></Card>
+          <Card className="store-cart-summary"><p className="eyebrow">RESUMEN</p><h2>Tu pedido</h2><div className="store-summary-line"><span>Productos ({unidades})</span><span>{formatearPrecio(total)}</span></div><div className="store-summary-line"><span>Envío</span><Badge variant="secondary">Gratis</Badge></div><Separator /><div className="store-summary-total"><span>Total</span><strong>{formatearPrecio(total)}</strong></div><p className="store-tax-note">Impuestos incluidos</p><Button size="lg" className="store-checkout-button" onClick={() => navigate(usuario ? '/checkout' : '/login')}>Continuar al checkout <ArrowRight size={16} /></Button><div className="store-summary-assurance"><ShieldCheck size={16} /> Pago seguro · <Truck size={16} /> Envío gratuito</div></Card>
         </div>
       )}
     </main>
