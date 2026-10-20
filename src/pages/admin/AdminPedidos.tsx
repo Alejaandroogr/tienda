@@ -8,6 +8,7 @@ import { Skeleton } from '../../components/ui/skeleton';
 import TablaAdaptable from '../../components/TablaAdaptable';
 import { toast } from 'sonner';
 import { formatearPrecio } from '../../lib/formato';
+import { API_URL } from '../../lib/api';
 
 interface PedidoAdmin {
   id: number;
@@ -73,7 +74,7 @@ function AdminPedidos() {
         setError('');
 
         const respuesta = await fetch(
-          'http://localhost/tienda/backend/pedidos/listar-admin.php',
+          `${API_URL}/pedidos/listar-admin.php`,
           {
             method: 'GET',
             credentials: 'include',
@@ -115,7 +116,7 @@ function AdminPedidos() {
       setError('');
 
       const respuesta = await fetch(
-        'http://localhost/tienda/backend/pedidos/cambiar-estado.php',
+        `${API_URL}/pedidos/cambiar-estado.php`,
         {
           method: 'PUT',
           headers: {

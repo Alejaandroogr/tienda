@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Skeleton } from '../../components/ui/skeleton';
 import TablaAdaptable from '../../components/TablaAdaptable';
 import { toast } from 'sonner';
+import { API_URL } from '../../lib/api';
 
 interface UsuarioAdmin {
   id: number;
@@ -73,7 +74,7 @@ function AdminUsuarios() {
 
         const respuesta =
           await fetch(
-            'http://localhost/tienda/backend/usuarios/listar-admin.php',
+            `${API_URL}/usuarios/listar-admin.php`,
             {
               credentials: 'include',
             }
@@ -126,7 +127,7 @@ function AdminUsuarios() {
 
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/usuarios/cambiar-rol.php',
+          `${API_URL}/usuarios/cambiar-rol.php`,
           {
             method: 'PUT',
             headers: {

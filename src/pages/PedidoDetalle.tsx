@@ -10,6 +10,7 @@ import { Separator } from '../components/ui/separator';
 import { Skeleton } from '../components/ui/skeleton';
 import TablaAdaptable from '../components/TablaAdaptable';
 import { formatearPrecio } from '../lib/formato';
+import { API_URL } from '../lib/api';
 
 interface DetallePedido {
   id: number;
@@ -65,7 +66,7 @@ function PedidoDetalle() {
 
       try {
         const respuesta = await fetch(
-          `http://localhost/tienda/backend/pedidos/obtener.php?id=${id}`,
+          `${API_URL}/pedidos/obtener.php?id=${id}`,
           {
             credentials: 'include',
             signal: controlador.signal,

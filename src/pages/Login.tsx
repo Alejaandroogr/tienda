@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { API_URL } from '../lib/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ function Login() {
     }
     try {
       setCargando(true);
-      const respuesta = await fetch('http://localhost/tienda/backend/usuarios/login.php', {
+      const respuesta = await fetch(`${API_URL}/usuarios/login.php`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email, password }),
       });
       const datos = await respuesta.json();

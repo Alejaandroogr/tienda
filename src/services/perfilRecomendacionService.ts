@@ -15,8 +15,10 @@ import type {
   PerfilRecomendacion,
   RespuestaPerfilRecomendacion,
 } from '../types/PerfilRecomendacion';
+// Con extensión: los tests de Node importan este servicio sin pasar por Vite.
+import { API_URL } from '../lib/api.ts';
 
-const BASE_URL = 'http://localhost/tienda/backend/productos';
+const BASE_URL = `${API_URL}/productos`;
 
 const opciones = (valores: readonly string[]) => valores.map((valor) => ({ valor, etiqueta: valor }));
 const nivelesRendimiento = [

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Skeleton } from '../../components/ui/skeleton';
 import { toast } from 'sonner';
 import { formatearPrecio } from '../../lib/formato';
+import { API_URL } from '../../lib/api';
 
 interface DashboardData {
   usuarios: { total: number };
@@ -50,7 +51,7 @@ function AdminDashboard() {
       setCargando(true);
       setError('');
       try {
-        const respuesta = await fetch('http://localhost/tienda/backend/admin/dashboard.php', { credentials: 'include' });
+        const respuesta = await fetch(`${API_URL}/admin/dashboard.php`, { credentials: 'include' });
         const resultado = await respuesta.json();
         if (!respuesta.ok) throw new Error(resultado.error || 'No se han podido obtener las estadísticas');
         setDatos(resultado as DashboardData);

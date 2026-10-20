@@ -16,6 +16,7 @@ import { Card } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import { formatearPrecio } from '../lib/formato';
+import { API_URL } from '../lib/api';
 
 function Checkout() {
   const {
@@ -100,7 +101,7 @@ function Checkout() {
       setCargando(true);
 
       const respuesta = await fetch(
-        'http://localhost/tienda/backend/pedidos/crear.php',
+        `${API_URL}/pedidos/crear.php`,
         {
           method: 'POST',
           headers: {

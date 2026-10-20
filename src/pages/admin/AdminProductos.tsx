@@ -28,6 +28,7 @@ import {
   type EstadoCargaPerfil,
 } from '../../services/perfilRecomendacionService';
 import { formatearPrecio } from '../../lib/formato';
+import { API_URL } from '../../lib/api';
 
 interface Categoria {
   id: number;
@@ -130,10 +131,10 @@ function AdminProductos() {
           respuestaCategorias,
         ] = await Promise.all([
           fetch(
-            'http://localhost/tienda/backend/productos/listar.php'
+            `${API_URL}/productos/listar.php`
           ),
           fetch(
-            'http://localhost/tienda/backend/categorias/listar.php'
+            `${API_URL}/categorias/listar.php`
           ),
         ]);
 
@@ -359,7 +360,7 @@ function AdminProductos() {
   const recargarProductos = async () => {
     const respuesta =
       await fetch(
-        'http://localhost/tienda/backend/productos/listar.php'
+        `${API_URL}/productos/listar.php`
       );
 
     const datos =
@@ -432,7 +433,7 @@ function AdminProductos() {
       const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/crear.php',
+          `${API_URL}/productos/crear.php`,
           {
             method: 'POST',
             headers: {
@@ -547,7 +548,7 @@ function AdminProductos() {
       const perfilPayload = crearPayloadPerfil(perfilIA, nombreCategoriaFormulario, estadoPerfil);
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/editar.php',
+          `${API_URL}/productos/editar.php`,
           {
             method: 'PUT',
             headers: {
@@ -616,7 +617,7 @@ function AdminProductos() {
 
       const respuesta =
         await fetch(
-          'http://localhost/tienda/backend/productos/eliminar.php',
+          `${API_URL}/productos/eliminar.php`,
           {
             method: 'DELETE',
             headers: {

@@ -13,9 +13,11 @@ import type {
   RespuestaRecomendaciones,
   SolicitudRecomendaciones,
 } from '../types/Recomendaciones';
+// Con extensión: los tests de Node importan este servicio sin pasar por Vite.
+import { API_URL } from '../lib/api.ts';
 
-const API_URL =
-  'http://localhost/tienda/backend/recomendaciones/recomendar.php';
+const URL_RECOMENDAR =
+  `${API_URL}/recomendaciones/recomendar.php`;
 
 /** Error con el código del backend (o uno propio del cliente) y el estado HTTP, si hubo respuesta. */
 export class ErrorRecomendaciones extends Error {
@@ -153,7 +155,7 @@ export async function solicitarRecomendaciones(
   let respuesta: Response;
 
   try {
-    respuesta = await fetch(API_URL, {
+    respuesta = await fetch(URL_RECOMENDAR, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
